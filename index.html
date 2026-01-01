@@ -174,7 +174,9 @@ button.pressed {
 </div>
 
 <script>
-/* =========================
+const canUseFileSystemAccess =
+    "showDirectoryPicker" in window &&
+    location.protocol === "https:";/* =========================
    初期設定
    ========================= */
 const yearSelect  = document.getElementById("year");
@@ -244,26 +246,28 @@ diaryInput.addEventListener("input", () => {
 /* =========================
    保存処理（Canvas描画）
    ========================= */
-saveBtn.addEventListener("click", () => {saveBtn.addEventListener("click", () => {
+saveBtn.addEventListener("click", () => {
 
-    saveBtn.classList.add("pressed");
-    setTimeout(() => saveBtn.classList.remove("pressed"), 150);
-    // ▼ 日付を取得（ここは既存変数を使ってOK）
+// ① 押した感の演出
+saveBtn.classList.add("pressed");
+setTimeout(() => saveBtn.classList.remove("pressed"), 150);
+
+// ② 日付を取得
 const y = yearSelect.value;
 const m = monthSelect.value.padStart(2, "0");
 const d = daySelect.value.padStart(2, "0");
 
-// ▼ 本文を取得
+// ③ 本文を取得
 const bodyText = diaryInput.value;
 
-// ▼ TXTの中身（※データ内容は自由に変更してOK）
+// ④ TXTの中身
 const fileContent =
 `${y}年${m}月${d}日
 
 ${bodyText}
 `;
 
-// ▼ TXTとして保存
+// ⑤ TXTとして保存
 const blob = new Blob(
     [fileContent],
     { type: "text/plain;charset=utf-8" }
@@ -273,25 +277,11 @@ const url = URL.createObjectURL(blob);
 const a = document.createElement("a");
 a.href = url;
 a.download = `${y}-${m}-${d}.txt`;
-
 document.body.appendChild(a);
 a.click();
 document.body.removeChild(a);
 URL.revokeObjectURL(url);
-
-// ▼ 保存完了メッセージ（既存UIがあればそれを使う）
 message.textContent = "しまいました（TXTで保存）";
-});
-
-    // ファイル名をタイトルに反映（印刷時用）
-    document.title = `${y}-${m}-${d}`;
-
-    message.textContent = "しまいました（共有・保存してください）";
-
-    // 印刷 → PDF保存
-    setTimeout(() => {
-        window.print();
-    }, 300);
 });
 
 /* =========================
