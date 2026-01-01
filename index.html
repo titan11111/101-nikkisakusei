@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>ぼちぼち日記ストッカー</title>
+
+<style>
+/* =========================
+   全体レイアウト
+   ========================= */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif;
+    background: #f7f7f7;
+    color: #222;
+}
+
+.wrapper {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 16px;
+}
+
+/* =========================
+   ヘッダー
+   ========================= */
+header {
+    margin-bottom: 20px;
+}
+
+header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+}
+
+header p {
+    font-size: 13px;
+    color: #666;
+    margin: 0;
+}
+
+/* =========================
+   日付ダッシュボード
+   ========================= */
+.date-panel {
+    display: flex;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.date-panel select {
+    flex: 1;
+    padding: 8px;
+    font-size: 14px;
+}
+
+/* =========================
+   日記入力
+   ========================= */
+textarea {
+    width: 100%;
+    height: 200px;
+    padding: 12px;
+    box-sizing: border-box;
+    font-size: 15px;
+    line-height: 1.6;
+    resize: vertical;
+}
+
+.counter {
+    text-align: right;
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+}
+
+/* =========================
+   保存ボタン
+   ========================= */
+   button {
+    width: 100%;
+    margin-top: 20px;
+    padding: 14px;
+    font-size: 16px;
+
+    background: #222;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+
+    /* 打感 */
+    box-shadow: 0 4px 0 #000;
+
+    transition:
+        transform 0.05s ease,
+        box-shadow 0.05s ease,
+        background 0.1s ease;
+}
+
+button:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #000;
+    background: #111;
+}
+
+/* JSから一瞬だけ付けるクラス */
+button.pressed {
+    background: #000;
+}
+
+
+
+/* =========================
+   メッセージ
+   ========================= */
+.message {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #555;
+}
+
+/* =========================
+   印刷用Canvas
+   ========================= */
+#printArea {
+    display: none;
+}
+
+@media print {
+    body * {
+        display: none;
+    }
+    #printArea {
+        display: block;
+    }
+}
+</style>
+</head>
+
+<body>
+<div class="wrapper">
+
+<header>
+    <h1>ぼちぼち日記ストッカー</h1>
+    <p>今日を書いて、今日をしまう</p>
+</header>
+
+<!-- 日付選択 -->
+<div class="date-panel">
+    <select id="year"></select>
+    <select id="month"></select>
+    <select id="day"></select>
+</div>
+
+<!-- 日記入力 -->
+<textarea id="diary" placeholder="ぼちぼち書く…"></textarea>
+<div class="counter">
+    <span id="count">0</span> / 400 字
+</div>
+
+<button id="saveBtn">この日をしまう</button>
+
+<div class="message" id="message"></div>
+
+</div>
+
+<!-- 印刷用 -->
+<div id="printArea">
+    <canvas id="canvas" width="794" height="1123"></canvas>
+</div>
+
+<script>
+/* =========================
+   初期設定
+   ========================= */
+const yearSelect  = document.getElementById("year");
+const monthSelect = document.getElementById("month");
+const daySelect   = document.getElementById("day");
+const diaryInput  = document.getElementById("diary");
+const countLabel  = document.getElementById("count");
+const saveBtn     = document.getElementById("saveBtn");
+const message     = document.getElementById("message");
+const canvas      = document.getElementById("canvas");
+const ctx         = canvas.getContext("2d");
+
+/* =========================
+   日付セレクタ生成
+   ========================= */
+const today = new Date();
+const currentYear = today.getFullYear();
+
+for (let y = currentYear - 5; y <= currentYear + 5; y++) {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = y;
+    if (y === currentYear) opt.selected = true;
+    yearSelect.appendChild(opt);
+}
+
+for (let m = 1; m <= 12; m++) {
+    const opt = document.createElement("option");
+    opt.value = m;
+    opt.textContent = m;
+    if (m === today.getMonth() + 1) opt.selected = true;
+    monthSelect.appendChild(opt);
+}
+
+function updateDays() {
+    daySelect.innerHTML = "";
+    const y = parseInt(yearSelect.value);
+    const m = parseInt(monthSelect.value);
+    const lastDay = new Date(y, m, 0).getDate();
+
+    for (let d = 1; d <= lastDay; d++) {
+        const opt = document.createElement("option");
+        opt.value = d;
+        opt.textContent = d;
+        if (
+            d === today.getDate() &&
+            y === today.getFullYear() &&
+            m === today.getMonth() + 1
+        ) {
+            opt.selected = true;
+        }
+        daySelect.appendChild(opt);
+    }
+}
+
+yearSelect.addEventListener("change", updateDays);
+monthSelect.addEventListener("change", updateDays);
+updateDays();
+
+/* =========================
+   文字数カウント
+   ========================= */
+diaryInput.addEventListener("input", () => {
+    countLabel.textContent = diaryInput.value.length;
+});
+
+/* =========================
+   保存処理（Canvas描画）
+   ========================= */
+saveBtn.addEventListener("click", () => {saveBtn.addEventListener("click", () => {
+
+    saveBtn.classList.add("pressed");
+    setTimeout(() => saveBtn.classList.remove("pressed"), 150);
+    // ▼ 日付を取得（ここは既存変数を使ってOK）
+const y = yearSelect.value;
+const m = monthSelect.value.padStart(2, "0");
+const d = daySelect.value.padStart(2, "0");
+
+// ▼ 本文を取得
+const bodyText = diaryInput.value;
+
+// ▼ TXTの中身（※データ内容は自由に変更してOK）
+const fileContent =
+`${y}年${m}月${d}日
+
+${bodyText}
+`;
+
+// ▼ TXTとして保存
+const blob = new Blob(
+    [fileContent],
+    { type: "text/plain;charset=utf-8" }
+);
+
+const url = URL.createObjectURL(blob);
+const a = document.createElement("a");
+a.href = url;
+a.download = `${y}-${m}-${d}.txt`;
+
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+URL.revokeObjectURL(url);
+
+// ▼ 保存完了メッセージ（既存UIがあればそれを使う）
+message.textContent = "しまいました（TXTで保存）";
+});
+
+    // ファイル名をタイトルに反映（印刷時用）
+    document.title = `${y}-${m}-${d}`;
+
+    message.textContent = "しまいました（共有・保存してください）";
+
+    // 印刷 → PDF保存
+    setTimeout(() => {
+        window.print();
+    }, 300);
+});
+
+/* =========================
+   テキスト折り返し
+   ========================= */
+function wrapText(context, text, maxWidth) {
+    const chars = text.split("");
+    let line = "";
+    const lines = [];
+
+    chars.forEach(char => {
+        const testLine = line + char;
+        const width = context.measureText(testLine).width;
+        if (width > maxWidth && line !== "") {
+            lines.push(line);
+            line = char;
+        } else {
+            line = testLine;
+        }
+    });
+
+    if (line) lines.push(line);
+    return lines;
+}
+</script>
+</body>
+</html>
