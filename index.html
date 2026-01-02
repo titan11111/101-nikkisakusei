@@ -2,7 +2,8 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
 <title>ぼちぼち日記ストッカー</title>
 
@@ -82,30 +83,25 @@ textarea {
    保存ボタン
    ========================= */
    button {
-    width: 100%;
-    margin-top: 20px;
-    padding: 14px;
-    font-size: 16px;
+  width: 100%;
+  padding: 14px;
+  font-size: 18px;
+  background: #222;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
 
-    background: #222;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
+  box-shadow: 0 4px 0 #000;
+  -webkit-tap-highlight-color: transparent;
 
-    /* 打感 */
-    box-shadow: 0 4px 0 #000;
-
-    transition:
-        transform 0.05s ease,
-        box-shadow 0.05s ease,
-        background 0.1s ease;
+  transition: transform 0.05s ease, box-shadow 0.05s ease;
 }
 
 button:active {
-    transform: translateY(3px);
-    box-shadow: 0 1px 0 #000;
-    background: #111;
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #000;
 }
+
 
 /* JSから一瞬だけ付けるクラス */
 button.pressed {
