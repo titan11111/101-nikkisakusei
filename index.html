@@ -246,49 +246,46 @@ diaryInput.addEventListener("input", () => {
 /* =========================
    保存処理（TXTファイル保存）
    ========================= */
-   saveBtn.addEventListener("click", () => {
+saveBtn.addEventListener("click", () => {
 
-// ボタン打感
-saveBtn.classList.add("pressed");
-setTimeout(() => saveBtn.classList.remove("pressed"), 150);
+    // ボタンの打感
+    saveBtn.classList.add("pressed");
+    setTimeout(() => saveBtn.classList.remove("pressed"), 150);
 
-// 日付取得
-const y = yearSelect.value;
-const m = monthSelect.value.padStart(2, "0");
-const d = daySelect.value.padStart(2, "0");
+    // 日付取得
+    const y = yearSelect.value;
+    const m = monthSelect.value.padStart(2, "0");
+    const d = daySelect.value.padStart(2, "0");
 
-// 本文取得
-const bodyText = diaryInput.value.trim();
-if (bodyText === "") {
-    message.textContent = "まだ何も書かれていません";
-    return;
-}
+    // 本文
+    const bodyText = diaryInput.value;
 
-// TXT内容
-const fileContent =
+    // TXT内容
+    const fileContent =
 `${y}年${m}月${d}日
 
 ${bodyText}
 `;
 
-// TXT保存
-const blob = new Blob(
-    [fileContent],
-    { type: "text/plain;charset=utf-8" }
-);
+    // Blob生成
+    const blob = new Blob(
+        [fileContent],
+        { type: "text/plain;charset=utf-8" }
+    );
 
-const url = URL.createObjectURL(blob);
-const a = document.createElement("a");
-a.href = url;
-a.download = `${y}-${m}-${d}.txt`;
+    // ダウンロード保存（iOS Safari対応）
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${y}-${m}-${d}.txt`;
 
-document.body.appendChild(a);
-a.click();
-document.body.removeChild(a);
-URL.revokeObjectURL(url);
+    document.body.appendChild(a); // ★重要
+    a.click();
+    document.body.removeChild(a);
 
-// 完了表示
-message.textContent = "TXTファイルとして保存しました";
+    URL.revokeObjectURL(url);
+
+    message.textContent = "しまいました（ダウンロードに保存）";
 });
 
 
