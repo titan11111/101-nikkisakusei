@@ -244,30 +244,34 @@ diaryInput.addEventListener("input", () => {
 });
 
 /* =========================
-   保存処理（Canvas描画）
+   保存処理（TXTファイル保存）
    ========================= */
-saveBtn.addEventListener("click", () => {
+   saveBtn.addEventListener("click", () => {
 
-// ① 押した感の演出
+// ボタン打感
 saveBtn.classList.add("pressed");
 setTimeout(() => saveBtn.classList.remove("pressed"), 150);
 
-// ② 日付を取得
+// 日付取得
 const y = yearSelect.value;
 const m = monthSelect.value.padStart(2, "0");
 const d = daySelect.value.padStart(2, "0");
 
-// ③ 本文を取得
-const bodyText = diaryInput.value;
+// 本文取得
+const bodyText = diaryInput.value.trim();
+if (bodyText === "") {
+    message.textContent = "まだ何も書かれていません";
+    return;
+}
 
-// ④ TXTの中身
+// TXT内容
 const fileContent =
 `${y}年${m}月${d}日
 
 ${bodyText}
 `;
 
-// ⑤ TXTとして保存
+// TXT保存
 const blob = new Blob(
     [fileContent],
     { type: "text/plain;charset=utf-8" }
@@ -277,12 +281,16 @@ const url = URL.createObjectURL(blob);
 const a = document.createElement("a");
 a.href = url;
 a.download = `${y}-${m}-${d}.txt`;
+
 document.body.appendChild(a);
 a.click();
 document.body.removeChild(a);
 URL.revokeObjectURL(url);
-message.textContent = "しまいました（TXTで保存）";
+
+// 完了表示
+message.textContent = "TXTファイルとして保存しました";
 });
+
 
 /* =========================
    テキスト折り返し
