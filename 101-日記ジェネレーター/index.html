@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+<title>ぼちぼち日記ストッカー</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+/* =========================
+   FF風 基本設定
+   ========================= */
+:root {
+    --gold:     #c9a84c;
+    --gold-dim: #7a5f2a;
+    --win-bg:   linear-gradient(160deg, #0d1b3e 0%, #040d22 100%);
+    --border:   2px solid var(--gold);
+    --text:     #e8e0cc;
+    --text-dim: #8a7f6a;
+    --btn-bg:   linear-gradient(180deg, #1a2d5a 0%, #0a1530 100%);
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+    background: #02050f url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c9a84c' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    color: var(--text);
+    min-height: 100vh;
+}
+
+.wrapper {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+}
+
+/* =========================
+   FFウィンドウ枠 共通
+   ========================= */
+.ff-window {
+    background: var(--win-bg);
+    border: var(--border);
+    position: relative;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+/* 四隅の菱形装飾 */
+.ff-window::before,
+.ff-window::after {
+    content: '◆';
+    color: var(--gold);
+    font-size: 10px;
+    position: absolute;
+    line-height: 1;
+}
+.ff-window::before { top: -7px; left: -7px; }
+.ff-window::after  { bottom: -7px; right: -7px; }
+
+/* =========================
+   ヘッダー
+   ========================= */
+header {
+    text-align: center;
+    padding: 28px 0 20px;
+}
+
+header h1 {
+    font-family: 'Cinzel', serif;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--gold);
+    margin: 0 0 6px 0;
+    letter-spacing: 0.1em;
+    text-shadow: 0 0 20px rgba(201,168,76,0.6);
+}
+
+header p {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin: 0;
+    letter-spacing: 0.15em;
+}
+
+/* =========================
+   日付パネル
+   ========================= */
+.date-panel {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.date-panel select {
+    flex: 1;
+    padding: 8px 6px;
+    font-size: 14px;
+    background: #050e28;
+    color: var(--text);
+    border: 1px solid var(--gold-dim);
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    text-align: center;
+}
+
+.date-panel select:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 8px rgba(201,168,76,0.4);
+}
+
+/* =========================
+   日記入力
+   ========================= */
+textarea {
+    width: 100%;
+    height: 200px;
+    padding: 12px;
+    font-size: 15px;
+    line-height: 1.8;
+    resize: vertical;
+    background: #03091a;
+    color: var(--text);
+    border: 1px solid var(--gold-dim);
+    outline: none;
+    font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+
+textarea:focus {
+    border-color: var(--gold);
+    box-shadow: inset 0 0 12px rgba(201,168,76,0.08);
+}
+
+textarea::placeholder { color: #3a3020; }
+
+.counter {
+    text-align: right;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    letter-spacing: 0.05em;
+}
+
+/* =========================
+   ボタン
+   ========================= */
+button {
+    width: 100%;
+    padding: 14px;
+    font-size: 15px;
+    font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+    letter-spacing: 0.15em;
+    background: var(--btn-bg);
+    color: var(--gold);
+    border: var(--border);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s, box-shadow 0.15s;
+    margin-top: 10px;
+    position: relative;
+}
+
+button::before,
+button::after {
+    content: '◆';
+    font-size: 8px;
+    color: var(--gold);
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+}
+button::before { left: 12px; }
+button::after  { right: 12px; }
+
+button:hover {
+    background: linear-gradient(180deg, #243d7a 0%, #0f1e40 100%);
+    box-shadow: 0 0 12px rgba(201,168,76,0.35);
+}
+
+button:active,
+button.pressed {
+    background: linear-gradient(180deg, #0a1530 0%, #020812 100%);
+    box-shadow: none;
+}
+
+/* =========================
+   メッセージ
+   ========================= */
+.message {
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    text-align: center;
+    min-height: 18px;
+}
+
+/* =========================
+   過去の日記一覧
+   ========================= */
+#historySection h2 {
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    color: var(--gold);
+    letter-spacing: 0.2em;
+    margin: 0 0 10px 0;
+    text-transform: uppercase;
+}
+
+#historyList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#historyList li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    margin-bottom: 5px;
+    background: linear-gradient(90deg, #0a1530 0%, #050e28 100%);
+    border: 1px solid var(--gold-dim);
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+    transition: border-color 0.15s, background 0.15s;
+}
+
+#historyList li:hover {
+    border-color: var(--gold);
+    background: linear-gradient(90deg, #142040 0%, #0a1830 100%);
+}
+
+#historyList li::before {
+    content: '▶';
+    color: var(--gold-dim);
+    font-size: 9px;
+    margin-right: 10px;
+    flex-shrink: 0;
+    transition: color 0.15s;
+}
+
+#historyList li:hover::before { color: var(--gold); }
+
+#historyList li .preview {
+    color: var(--text-dim);
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 55%;
+}
+
+#historyEmpty {
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-align: center;
+    padding: 12px 0;
+}
+
+/* =========================
+   印刷用Canvas
+   ========================= */
+#printArea { display: none; }
+
+@media print {
+    body * { display: none; }
+    #printArea { display: block; }
+    #printArea canvas { display: block; }
+}
+</style>
+</head>
+
+<body>
+<div class="wrapper">
+
+<header>
+    <h1>ぼちぼち日記ストッカー</h1>
+    <p>― 今日を書いて、今日をしまう ―</p>
+</header>
+
+<div class="ff-window">
+    <!-- 日付選択 -->
+    <div class="date-panel">
+        <select id="year"></select>
+        <select id="month"></select>
+        <select id="day"></select>
+    </div>
+
+    <!-- 日記入力 -->
+    <textarea id="diary" placeholder="ぼちぼち書く…"></textarea>
+    <div class="counter">
+        <span id="count">0</span> / 400 字
+    </div>
+
+    <button id="saveBtn">この日をしまう</button>
+    <button id="printBtn">印刷する</button>
+
+    <div class="message" id="message"></div>
+</div>
+
+<!-- 過去の日記一覧 -->
+<section id="historySection" class="ff-window">
+    <h2>— Chronicles —</h2>
+    <ul id="historyList"></ul>
+    <p id="historyEmpty">まだ保存された日記はありません</p>
+</section>
+
+</div>
+
+<!-- 印刷用 -->
+<div id="printArea">
+    <canvas id="canvas" width="794" height="1123"></canvas>
+</div>
+
+<script>
+const canUseFileSystemAccess =
+    "showDirectoryPicker" in window &&
+    location.protocol === "https:";/* =========================
+   初期設定
+   ========================= */
+const yearSelect  = document.getElementById("year");
+const monthSelect = document.getElementById("month");
+const daySelect   = document.getElementById("day");
+const diaryInput  = document.getElementById("diary");
+const countLabel  = document.getElementById("count");
+const saveBtn     = document.getElementById("saveBtn");
+const message     = document.getElementById("message");
+const canvas      = document.getElementById("canvas");
+const ctx         = canvas.getContext("2d");
+
+/* =========================
+   日付セレクタ生成
+   ========================= */
+const today = new Date();
+const currentYear = today.getFullYear();
+
+for (let y = currentYear - 5; y <= currentYear + 5; y++) {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = y;
+    if (y === currentYear) opt.selected = true;
+    yearSelect.appendChild(opt);
+}
+
+for (let m = 1; m <= 12; m++) {
+    const opt = document.createElement("option");
+    opt.value = m;
+    opt.textContent = m;
+    if (m === today.getMonth() + 1) opt.selected = true;
+    monthSelect.appendChild(opt);
+}
+
+function updateDays() {
+    daySelect.innerHTML = "";
+    const y = parseInt(yearSelect.value);
+    const m = parseInt(monthSelect.value);
+    const lastDay = new Date(y, m, 0).getDate();
+
+    for (let d = 1; d <= lastDay; d++) {
+        const opt = document.createElement("option");
+        opt.value = d;
+        opt.textContent = d;
+        if (
+            d === today.getDate() &&
+            y === today.getFullYear() &&
+            m === today.getMonth() + 1
+        ) {
+            opt.selected = true;
+        }
+        daySelect.appendChild(opt);
+    }
+}
+
+yearSelect.addEventListener("change", () => { updateDays(); loadDiary(); });
+monthSelect.addEventListener("change", () => { updateDays(); loadDiary(); });
+daySelect.addEventListener("change", loadDiary);
+updateDays();
+loadDiary();
+
+/* =========================
+   LocalStorage キー生成
+   ========================= */
+function getKey() {
+    const y = yearSelect.value;
+    const m = monthSelect.value.padStart(2, "0");
+    const d = daySelect.value.padStart(2, "0");
+    return `diary_${y}-${m}-${d}`;
+}
+
+function loadDiary() {
+    const saved = localStorage.getItem(getKey());
+    diaryInput.value = saved || "";
+    countLabel.textContent = diaryInput.value.length;
+}
+
+/* =========================
+   文字数カウント
+   ========================= */
+diaryInput.addEventListener("input", () => {
+    if (diaryInput.value.length > 400) {
+        diaryInput.value = diaryInput.value.slice(0, 400);
+    }
+    const len = diaryInput.value.length;
+    countLabel.textContent = len;
+    countLabel.style.color = len >= 400 ? "#e74c3c" : "#666";
+});
+
+/* =========================
+   保存処理（TXTファイル保存）
+   ========================= */
+saveBtn.addEventListener("click", () => {
+
+    // ボタンの打感
+    saveBtn.classList.add("pressed");
+    setTimeout(() => saveBtn.classList.remove("pressed"), 150);
+
+    // 日付取得
+    const y = yearSelect.value;
+    const m = monthSelect.value.padStart(2, "0");
+    const d = daySelect.value.padStart(2, "0");
+
+    // 本文
+    const bodyText = diaryInput.value;
+
+    // TXT内容
+    const fileContent =
+`${y}年${m}月${d}日
+
+${bodyText}
+`;
+
+    // Blob生成
+    const blob = new Blob(
+        [fileContent],
+        { type: "text/plain;charset=utf-8" }
+    );
+
+    // ダウンロード保存（iOS Safari対応）
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${y}-${m}-${d}.txt`;
+
+    document.body.appendChild(a); // ★重要
+    a.click();
+    document.body.removeChild(a);
+
+    URL.revokeObjectURL(url);
+
+    localStorage.setItem(getKey(), bodyText);
+    message.textContent = "しまいました（ダウンロード＋このブラウザに保存）";
+    renderHistory();
+});
+
+
+/* =========================
+   過去の日記一覧
+   ========================= */
+const historyList  = document.getElementById("historyList");
+const historyEmpty = document.getElementById("historyEmpty");
+
+function renderHistory() {
+    const entries = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith("diary_")) {
+            entries.push({ key, date: key.replace("diary_", ""), text: localStorage.getItem(key) });
+        }
+    }
+    entries.sort((a, b) => b.date.localeCompare(a.date));
+
+    historyList.innerHTML = "";
+    if (entries.length === 0) {
+        historyEmpty.style.display = "block";
+        return;
+    }
+    historyEmpty.style.display = "none";
+
+    entries.forEach(({ date, text }) => {
+        const li = document.createElement("li");
+        const preview = text.replace(/\n/g, " ").slice(0, 40) + (text.length > 40 ? "…" : "");
+        li.innerHTML = `<span>${date}</span><span class="preview">${preview}</span>`;
+        li.addEventListener("click", () => jumpToDate(date));
+        historyList.appendChild(li);
+    });
+}
+
+function jumpToDate(dateStr) {
+    const [y, m, d] = dateStr.split("-");
+    yearSelect.value  = y;
+    monthSelect.dispatchEvent(new Event("change")); // updateDays 再生成のため
+    monthSelect.value = String(parseInt(m));
+    updateDays();
+    daySelect.value   = String(parseInt(d));
+    loadDiary();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+renderHistory();
+
+/* =========================
+   印刷処理
+   ========================= */
+const printBtn = document.getElementById("printBtn");
+
+printBtn.addEventListener("click", () => {
+    const y = yearSelect.value;
+    const m = monthSelect.value.padStart(2, "0");
+    const d = daySelect.value.padStart(2, "0");
+    const bodyText = diaryInput.value;
+
+    // Canvas をクリア（A4: 794x1123px）
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 日付
+    ctx.fillStyle = "#222";
+    ctx.font = "bold 28px 'Hiragino Sans', sans-serif";
+    ctx.fillText(`${y}年${m}月${d}日`, 60, 80);
+
+    // 区切り線
+    ctx.strokeStyle = "#ccc";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(60, 100);
+    ctx.lineTo(734, 100);
+    ctx.stroke();
+
+    // 本文
+    ctx.font = "18px 'Hiragino Sans', sans-serif";
+    ctx.fillStyle = "#333";
+    const lines = wrapText(ctx, bodyText, 674);
+    lines.forEach((line, i) => {
+        ctx.fillText(line, 60, 140 + i * 32);
+    });
+
+    window.print();
+});
+
+/* =========================
+   テキスト折り返し
+   ========================= */
+function wrapText(context, text, maxWidth) {
+    const chars = text.split("");
+    let line = "";
+    const lines = [];
+
+    chars.forEach(char => {
+        const testLine = line + char;
+        const width = context.measureText(testLine).width;
+        if (width > maxWidth && line !== "") {
+            lines.push(line);
+            line = char;
+        } else {
+            line = testLine;
+        }
+    });
+
+    if (line) lines.push(line);
+    return lines;
+}
+</script>
+</body>
+</html>
