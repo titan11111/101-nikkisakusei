@@ -1,0 +1,2730 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BATTLE ARENA — NEON RETRO FIGHTERS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800;900&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet" />
+<style>
+  /* ============================================================
+     DESIGN TOKENS — Orange × Gray System v1.0
+     Text Style Hierarchy:
+       .txt-display  K.O./Title      Barlow 900  tracking .06em  uppercase
+       .txt-h1       Screen titles   Barlow 800  tracking .04em  uppercase
+       .txt-h2       Sub-headings    Barlow 700  tracking .08em  uppercase
+       .txt-label    UI small caps   Barlow 700  tracking .15em  uppercase
+       .txt-mono     Timer/HP/score  Barlow 900  tracking .02em
+       .txt-cta      Button text     Barlow 800  tracking .12em  uppercase
+       .txt-body     Descriptions    NotoSansJP 400  lh 1.7
+  ============================================================ */
+  :root{
+    /* Fonts */
+    --f-display: 'Barlow Condensed', 'Noto Sans JP', sans-serif;
+    --f-body:    'Noto Sans JP', 'Barlow Condensed', sans-serif;
+    --f-mono:    'Barlow Condensed', monospace;
+    /* Keep legacy alias for JS-applied inline styles */
+    --font-megadrive: 'Barlow Condensed', sans-serif;
+
+    /* Colors */
+    --c-orange:    #FF7A1A;
+    --c-orange-dk: #E85D04;
+    --c-orange-lt: #FFB347;
+    --c-orange-gl: rgba(255,122,26,.45);
+    --c-charcoal:  #2B2D31;
+    --c-midgray:   #4F5561;
+    --c-lightgray: #D9DCE1;
+    --c-bg:        #16181D;
+    --c-text:      #F5F7FA;
+    --c-danger:    #E84040;
+    --c-ok:        #40C870;
+
+    /* Legacy mapped aliases (keep for JS innerHTML that may reference them) */
+    --accent:    var(--c-orange);
+    --line:      var(--c-orange);
+    --line2:     var(--c-orange-dk);
+    --panel:     var(--c-charcoal);
+    --bg:        #1e2028;
+    --text:      var(--c-text);
+    --text-dim:  var(--c-midgray);
+    --danger:    var(--c-danger);
+    --ok:        var(--c-ok);
+    --screen-bg: linear-gradient(160deg, #10120f 0%, var(--c-bg) 50%, #0d0f14 100%);
+    --screen-bg-solid: var(--c-bg);
+
+    /* Shadows */
+    --sh-orange: 0 0 22px rgba(255,122,26,.55);
+    --sh-card:   0 4px 28px rgba(0,0,0,.6);
+
+    /* Transitions */
+    --t-snap: 120ms ease-out;
+    --t-base: 200ms ease-out;
+    --t-vs:   300ms cubic-bezier(.22,1,.36,1);
+
+    /* Radius */
+    --r-pill: 999px;
+    --r-card: 14px;
+    --r-btn:  8px;
+  }
+  /* ============================================================
+     GLOBAL RESET & BASE
+  ============================================================ */
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:var(--f-body);
+    color:var(--c-text);
+    background:var(--c-bg);
+    min-height:100vh;
+    overflow:hidden;
+  }
+  /* Subtle scanline overlay for atmosphere */
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:repeating-linear-gradient(to bottom, transparent 0 3px, rgba(0,0,0,.06) 3px 4px);
+    opacity:.4;
+  }
+  #app{position:relative; width:100vw; height:100vh; isolation:isolate; z-index:1;}
+  .screen{position:absolute; inset:0; display:none; z-index:1; pointer-events:none;}
+  .screen.active{display:flex; z-index:10; pointer-events:auto;}
+
+  .center{display:flex; align-items:center; justify-content:center;}
+  .column{display:flex; flex-direction:column; align-items:center; justify-content:center;}
+
+  /* ============================================================
+     VOLUME / SETTINGS ROW
+  ============================================================ */
+  .volume-row{display:flex; align-items:center; gap:12px; margin-top:14px; flex-wrap:wrap; justify-content:center;}
+  .volume-row label{
+    font-family:var(--f-display); font-size:.65rem; font-weight:700;
+    letter-spacing:.15em; text-transform:uppercase; color:var(--c-midgray);
+  }
+  .volume-row input[type="range"]{width:80px; accent-color:var(--c-orange);}
+
+  /* ============================================================
+     PANEL & BUTTON — Base Components
+  ============================================================ */
+  .panel{
+    background:var(--c-charcoal);
+    border:1px solid rgba(255,122,26,.25);
+    border-radius:var(--r-card);
+    box-shadow:var(--sh-card);
+  }
+  button{
+    appearance:none; border:none; cursor:pointer;
+    font-family:var(--f-display); font-size:.85rem;
+    font-weight:800; letter-spacing:.12em; text-transform:uppercase;
+    color:#fff;
+    background:var(--c-orange);
+    padding:13px 28px; border-radius:var(--r-pill);
+    border:2px solid var(--c-orange-lt);
+    box-shadow:var(--sh-orange);
+    transition:transform var(--t-snap), filter var(--t-snap), box-shadow var(--t-snap);
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+  }
+  button:hover{filter:brightness(1.1); box-shadow:0 0 30px rgba(255,122,26,.75);}
+  button:active{transform:scale(0.96); filter:brightness(1.14);}
+  button.alt{
+    background:rgba(255,255,255,.08);
+    border:1.5px solid var(--c-midgray);
+    color:var(--c-lightgray);
+    box-shadow:none;
+  }
+  button.alt:hover{border-color:var(--c-orange); color:var(--c-orange); box-shadow:none;}
+  button.ghost{
+    background:transparent;
+    border:1.5px solid var(--c-midgray);
+    color:var(--c-lightgray);
+    box-shadow:none;
+  }
+  button.ghost:hover{border-color:var(--c-orange-dk); color:var(--c-orange-lt);}
+  button.small{padding:9px 18px; font-size:.78rem;}
+  .menu-buttons{display:flex; gap:12px; flex-wrap:wrap; justify-content:center;}
+  .desc{max-width:760px; line-height:1.8; color:var(--c-lightgray); font-size:.9rem; margin:0 auto 24px;}
+
+  /* ============================================================
+     START SCREEN
+  ============================================================ */
+  #startScreen.active,#storyScreen.active,#vsScreen.active,#endingScreen.active{
+    background:radial-gradient(ellipse 80% 60% at 50% 35%, rgba(232,93,4,.13) 0%, transparent 70%),
+               linear-gradient(160deg, #10120f 0%, var(--c-bg) 50%, #0d0f14 100%) !important;
+  }
+  .title-wrap{text-align:center; padding:40px 28px; max-width:560px;}
+  .logo{
+    font-family:var(--f-display);
+    font-size:clamp(36px,8vw,76px);
+    font-weight:900;
+    letter-spacing:.1em;
+    margin:0 0 8px;
+    line-height:1;
+    text-transform:uppercase;
+    background:linear-gradient(to bottom right, var(--c-orange-lt), var(--c-orange));
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    background-clip:text;
+    animation:logoFloat 2.4s ease-in-out infinite;
+  }
+  @keyframes logoFloat{0%,100%{filter:drop-shadow(0 0 12px rgba(255,122,26,.5))} 50%{filter:drop-shadow(0 0 28px rgba(255,122,26,.8))}}
+  .subtitle{
+    font-family:var(--f-display); font-size:clamp(10px,1.6vw,15px);
+    font-weight:700; letter-spacing:.4em; text-transform:uppercase;
+    color:var(--c-midgray); margin:0 0 8px;
+  }
+  .title-tagline{
+    font-family:var(--f-body); font-size:.9rem;
+    line-height:1.7; color:var(--c-lightgray); margin:0 0 32px;
+  }
+
+  /* ============================================================
+     STORY SCREEN
+  ============================================================ */
+  #storyScreen .panel{width:min(680px,90vw); padding:36px 36px;}
+  #storyScreen .story-head{
+    font-family:var(--f-display); font-size:.68rem; font-weight:700;
+    letter-spacing:.25em; text-transform:uppercase; color:var(--c-orange-lt);
+    margin-bottom:20px;
+  }
+  #storyText{
+    font-family:var(--f-body); font-size:clamp(15px,2vw,19px);
+    line-height:2; min-height:130px; white-space:pre-wrap;
+    color:var(--c-lightgray); font-weight:400;
+  }
+  #storyScreen .story-footer{display:flex; justify-content:space-between; align-items:center; margin-top:28px; flex-wrap:wrap; gap:12px;}
+  #storyScreen .story-page{
+    font-family:var(--f-display); font-size:.68rem; font-weight:700;
+    letter-spacing:.12em; text-transform:uppercase; color:var(--c-midgray);
+  }
+  .top-actions{display:flex; gap:10px; justify-content:flex-end;}
+  #storyScreen .story-layout{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;}
+  #storyScreen .story-portrait{
+    width:min(160px,28vw);height:min(220px,38vw);border-radius:12px;flex-shrink:0;
+    border:2px solid var(--c-orange);box-shadow:var(--sh-orange);
+    display:none;background-size:500% 500%;background-repeat:no-repeat;
+  }
+  #storyScreen .story-portrait.visible{display:block;}
+  .story-char-name{
+    font-family:var(--f-display); font-size:.75rem; font-weight:700;
+    letter-spacing:.25em; text-transform:uppercase; color:var(--c-orange-lt);
+    margin-bottom:10px; display:none;
+  }
+  .story-char-name.visible{display:block;}
+
+  /* ============================================================
+     CHARACTER SELECT — Screen
+  ============================================================ */
+  #selectScreen.active{background:var(--c-bg); flex-direction:row; padding:0; overflow:hidden;}
+  .sel-bg{position:absolute;inset:0;pointer-events:none;transition:background .5s ease;z-index:0;}
+  .sel-layout{display:flex;width:100%;height:100%;position:relative;z-index:1;align-items:stretch;}
+
+  /* Side panels */
+  .sel-panel{
+    width:min(200px,16vw);flex-shrink:0;
+    display:flex;flex-direction:column;align-items:center;
+    padding:20px 10px 14px;
+    background:rgba(22,24,29,.92);
+    gap:8px;
+  }
+  .sel-panel-left{border-right:1px solid rgba(255,255,255,.06);}
+  .sel-panel-right{border-left:1px solid rgba(255,255,255,.06);}
+  .sel-player-tag{
+    font-family:var(--f-display); font-size:.68rem; font-weight:800;
+    letter-spacing:.3em; text-transform:uppercase;
+    color:var(--c-orange); margin-bottom:4px;
+  }
+  .sel-tag-cpu{color:var(--c-midgray);}
+  .sel-portrait-big{
+    width:min(148px,12vw);height:min(186px,15vw);border-radius:10px;
+    background:rgba(255,255,255,.04);
+    border:2px solid rgba(255,122,26,.3);
+    background-size:500% 500%;background-repeat:no-repeat;
+    flex-shrink:0;box-shadow:0 6px 28px rgba(0,0,0,.6);
+    transition:border-color .25s ease,box-shadow .25s ease;
+  }
+  .sel-portrait-big.p1-selected{
+    border-color:var(--c-orange);
+    box-shadow:0 0 20px var(--c-orange-gl), 0 6px 28px rgba(0,0,0,.6);
+  }
+  .sel-char-name{
+    font-family:var(--f-display); font-size:clamp(10px,1vw,14px);
+    font-weight:800; color:var(--c-text); text-align:center;
+    letter-spacing:.08em; text-transform:uppercase; margin-top:4px;
+  }
+  .sel-char-type{
+    font-family:var(--f-display); font-size:.6rem; font-weight:700;
+    padding:2px 10px; border-radius:var(--r-pill);
+    background:rgba(255,122,26,.12); color:var(--c-orange-lt);
+    border:1px solid rgba(255,122,26,.3);
+    letter-spacing:.08em; text-transform:uppercase;
+  }
+  .sel-stat-bars{width:100%;display:flex;flex-direction:column;gap:5px;margin-top:4px;}
+  .sel-stat-row{display:flex;align-items:center;gap:5px;font-family:var(--f-display);font-size:.6rem;color:rgba(255,255,255,.45);letter-spacing:.06em;}
+  .sel-stat-track{flex:1;height:4px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;}
+  .sel-stat-fill{height:100%;border-radius:2px;transition:width .3s ease;}
+  .sel-char-flavor{font-family:var(--f-body);font-size:.72rem;color:rgba(255,255,255,.38);text-align:center;line-height:1.6;margin:0;padding:0 4px;}
+
+  /* Center grid area */
+  .sel-center{flex:1;display:flex;flex-direction:column;align-items:center;padding:14px 10px 10px;gap:10px;overflow-y:auto;min-width:0;}
+  .sel-title-row{text-align:center;}
+  .sel-heading{
+    font-family:var(--f-display); font-size:clamp(12px,1.6vw,18px);
+    font-weight:800; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--c-orange);
+    text-shadow:0 0 20px rgba(255,122,26,.45);
+  }
+  .sel-char-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;width:100%;max-width:490px;}
+  .sel-card{
+    position:relative;aspect-ratio:2/3;min-height:80px;
+    border-radius:10px;border:1.5px solid rgba(255,255,255,.1);
+    background:rgba(255,255,255,.03);cursor:pointer;overflow:hidden;
+    transition:border-color .12s,transform .12s,box-shadow .12s;
+    display:flex;flex-direction:column;
+  }
+  .sel-card:hover{
+    border-color:rgba(255,122,26,.5);
+    transform:translateY(-3px) scale(1.03);
+    box-shadow:0 8px 24px rgba(255,122,26,.2);
+  }
+  .sel-card.selected{
+    border-color:var(--c-orange);
+    box-shadow:0 0 18px rgba(255,122,26,.55), inset 0 0 10px rgba(255,122,26,.1);
+  }
+  .sel-card.cpu-selected{
+    border-color:var(--c-midgray);
+    box-shadow:0 0 12px rgba(79,85,97,.5), inset 0 0 8px rgba(79,85,97,.1);
+  }
+  .sel-card-portrait{flex:1;background-size:500% 500%;background-repeat:no-repeat;background-color:rgba(255,255,255,.03);}
+  .sel-card-name{
+    font-family:var(--f-display); font-size:.58rem; font-weight:800;
+    color:var(--c-text); text-align:center; padding:3px 2px;
+    background:rgba(0,0,0,.7); letter-spacing:.06em; text-transform:uppercase;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+
+  /* CPU opponent row */
+  .sel-cpu-row{display:flex;align-items:center;gap:8px;width:100%;max-width:490px;}
+  .sel-cpu-label{
+    font-family:var(--f-display); font-size:.6rem; font-weight:700;
+    letter-spacing:.2em; text-transform:uppercase; color:var(--c-midgray); flex-shrink:0;
+  }
+  .sel-opp-grid{display:flex;flex-wrap:wrap;gap:4px;}
+  .sel-opp-btn{
+    width:30px;height:30px;border-radius:6px;
+    border:1.5px solid rgba(79,85,97,.3);
+    background:rgba(255,255,255,.04);cursor:pointer;
+    background-size:500% 500%;background-repeat:no-repeat;
+    transition:border-color .1s,transform .1s;flex-shrink:0;
+  }
+  .sel-opp-btn:hover{border-color:rgba(255,122,26,.6);transform:scale(1.15);}
+  .sel-opp-btn.cpu-sel{border-color:var(--c-midgray);box-shadow:0 0 8px rgba(79,85,97,.5);}
+
+  /* Bottom actions */
+  .sel-bottom{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;max-width:490px;}
+  .sel-diff-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;}
+  .sel-diff-label{
+    font-family:var(--f-display); font-size:.6rem; font-weight:700;
+    letter-spacing:.2em; text-transform:uppercase; color:rgba(255,255,255,.38);
+  }
+  .sel-actions-row{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;}
+  .sel-fight-btn{
+    background:var(--c-orange);
+    color:#fff; font-family:var(--f-display); font-size:clamp(12px,1.6vw,16px);
+    font-weight:800; padding:12px 32px; border-radius:var(--r-pill);
+    letter-spacing:.15em; text-transform:uppercase;
+    box-shadow:var(--sh-orange); border:2px solid var(--c-orange-lt);
+  }
+  .sel-fight-btn:hover{box-shadow:0 0 32px rgba(255,122,26,.8);}
+  .sel-story-btn{
+    background:rgba(255,255,255,.08);
+    color:var(--c-lightgray); font-family:var(--f-display); font-size:clamp(12px,1.6vw,15px);
+    font-weight:700; padding:12px 22px; border-radius:var(--r-pill);
+    letter-spacing:.12em; text-transform:uppercase; border:1.5px solid var(--c-midgray);
+    box-shadow:none;
+  }
+  .sel-story-btn:hover{border-color:var(--c-orange-dk); color:var(--c-orange-lt);}
+
+  /* Difficulty buttons */
+  #selectScreen{padding:20px 16px; flex-direction:column; gap:20px;}
+  #selectScreen .heading{
+    font-family:var(--f-display); font-weight:800; font-size:clamp(18px,3vw,28px);
+    letter-spacing:.12em; text-transform:uppercase; color:var(--c-text); margin-bottom:4px;
+  }
+  #selectScreen .hint{font-family:var(--f-body); font-size:.85rem; color:var(--c-midgray);}
+  .difficulty-row{display:flex; gap:8px; margin:10px 0; flex-wrap:wrap; justify-content:center;}
+  .difficulty-btn{
+    padding:7px 16px; font-size:.72rem; background:transparent;
+    border:1.5px solid var(--c-midgray); color:var(--c-lightgray); box-shadow:none;
+    border-radius:var(--r-pill);
+  }
+  .difficulty-btn.selected{
+    border-color:var(--c-orange); color:var(--c-orange-lt);
+    box-shadow:0 0 10px rgba(255,122,26,.3);
+  }
+  .difficulty-btn:hover{border-color:var(--c-orange-dk); color:var(--c-orange-lt);}
+  .char-type{
+    display:inline-block; font-family:var(--f-display); font-size:.62rem; font-weight:700;
+    padding:2px 9px; border-radius:var(--r-pill);
+    background:rgba(255,122,26,.15); color:var(--c-orange-lt);
+    border:1px solid rgba(255,122,26,.3); letter-spacing:.06em; text-transform:uppercase;
+    margin-bottom:4px;
+  }
+  .select-layout{display:flex; flex-direction:column; gap:20px; width:min(1000px,96vw); max-width:100%;}
+  .select-preview{
+    padding:18px 22px; border-radius:var(--r-card); border:1.5px solid rgba(255,122,26,.2);
+    background:var(--c-charcoal); box-shadow:var(--sh-card);
+    display:flex; align-items:center; gap:20px; flex-wrap:wrap; min-height:100px;
+  }
+  .select-preview .preview-portrait{
+    width:130px; height:148px; border-radius:10px; flex-shrink:0; overflow:hidden; position:relative;
+    background:linear-gradient(135deg,var(--c1),var(--c2));
+    background-size:500% 500%; background-repeat:no-repeat;
+  }
+  .select-preview .preview-portrait.sprite-portrait{background-size:500% 500%; background-repeat:no-repeat;}
+  .select-preview .preview-info{flex:1; min-width:180px;}
+  .select-preview .preview-name{
+    font-family:var(--f-display); font-size:1.2rem; font-weight:800;
+    letter-spacing:.08em; text-transform:uppercase; color:var(--c-text); margin:0 0 5px;
+  }
+  .select-preview .preview-flavor{font-family:var(--f-body); font-size:.82rem; line-height:1.6; color:var(--c-lightgray); margin:0;}
+  .preview-stats{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:10px;}
+  .preview-stats .stat-bar{font-family:var(--f-display); font-size:.6rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--c-midgray);}
+  .preview-stats .stat-bar span{font-weight:800; color:var(--c-orange-lt); margin-left:4px;}
+  .char-grid{display:flex; flex-wrap:nowrap; justify-content:center; gap:8px; width:100%; overflow-x:auto; padding:8px 0; min-height:140px;}
+  .card{
+    padding:8px; min-width:96px; max-width:108px; min-height:126px; flex-shrink:0;
+    position:relative; overflow:hidden; cursor:pointer;
+    border:1.5px solid var(--c-midgray); border-radius:10px; background:var(--c-charcoal);
+    transition:transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+  }
+  .card:hover{transform:translateY(-3px); border-color:var(--c-orange-dk); box-shadow:0 6px 18px rgba(255,122,26,.2);}
+  .card.selected{border-color:var(--c-orange); box-shadow:0 0 18px rgba(255,122,26,.5); background:#1e1208;}
+  .card .portrait{
+    height:54px; border-radius:7px; margin-bottom:6px; overflow:hidden; position:relative;
+    background:linear-gradient(135deg,var(--c1),var(--c2));
+    background-size:500% 500%; background-repeat:no-repeat;
+  }
+  .card .portrait.sprite-portrait{background-size:500% 500%; background-repeat:no-repeat;}
+  .card .portrait::after{content:""; position:absolute; inset:0; pointer-events:none; border-radius:8px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);}
+  .card h3{margin:2px 0 4px; font-family:var(--f-display); font-size:.82rem; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:var(--c-text);}
+  .card .flavor{font-family:var(--f-body); font-size:.68rem; line-height:1.4; color:var(--c-midgray); margin:0; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  .stats{font-family:var(--f-body); font-size:.72rem; line-height:1.5; color:var(--c-midgray);}
+  .select-actions{display:flex; gap:12px; margin-top:8px; flex-wrap:wrap;}
+
+  /* ============================================================
+     VS SCREEN
+  ============================================================ */
+  #vsScreen{
+    flex-direction:row; align-items:center; justify-content:center;
+    gap:40px; padding:20px;
+    background:
+      radial-gradient(ellipse 50% 70% at 50% 50%, rgba(255,122,26,.12) 0%, transparent 70%),
+      linear-gradient(135deg, #0e100e 0%, var(--c-bg) 50%, #0c0e14 100%) !important;
+  }
+  .vs-portrait{
+    width:min(220px,28vw); height:min(280px,35vw);
+    border-radius:14px; border:2px solid var(--c-orange);
+    background:var(--c-charcoal);
+    background-size:500% 500%; background-repeat:no-repeat;
+    box-shadow:var(--sh-orange);
+  }
+  .vs-slide-left{animation:vs-slide-in-left .35s cubic-bezier(.22,1,.36,1) forwards;}
+  .vs-slide-right{animation:vs-slide-in-right .35s cubic-bezier(.22,1,.36,1) forwards;}
+  @keyframes vs-slide-in-left{0%{opacity:0; transform:translateX(-120px)} 100%{opacity:1; transform:translateX(0)}}
+  @keyframes vs-slide-in-right{0%{opacity:0; transform:translateX(120px)}  100%{opacity:1; transform:translateX(0)}}
+  .vs-center{display:flex; flex-direction:column; align-items:center; gap:14px;}
+  .vs-label{
+    font-family:var(--f-display); font-size:clamp(36px,7vw,68px);
+    font-weight:900; letter-spacing:-.04em; text-transform:uppercase;
+    color:var(--c-orange);
+    text-shadow:0 0 30px rgba(255,122,26,.7), 0 0 60px rgba(255,122,26,.3);
+    animation:vsEmblem .25s .05s cubic-bezier(.22,1,.36,1) both;
+  }
+  @keyframes vsEmblem{from{opacity:0;transform:scaleX(0) rotate(-5deg);}to{opacity:1;transform:scaleX(1) rotate(0);}}
+  .vs-countdown{
+    font-family:var(--f-mono); font-size:clamp(60px,12vw,120px);
+    font-weight:900; color:var(--c-text); min-height:1.2em;
+    text-shadow:0 0 20px rgba(255,255,255,.2);
+    letter-spacing:.02em;
+  }
+
+  /* ============================================================
+     BATTLE HUD & SCREEN
+  ============================================================ */
+  #battleScreen{flex-direction:column; align-items:stretch; justify-content:flex-start; overflow:hidden; background:var(--c-bg);}
+  #battleScreen.active{background:var(--c-bg);}
+  .battle-main{
+    flex:1 1 auto;
+    min-height:0;
+    display:grid;
+    grid-template-columns:minmax(180px, 22vw) minmax(0, 1fr) minmax(220px, 24vw);
+    gap:10px;
+    padding:10px 10px max(10px, env(safe-area-inset-bottom));
+    align-items:stretch;
+  }
+  .battle-side{
+    background:rgba(20,22,28,.88);
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:14px;
+    backdrop-filter:blur(6px);
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    padding:10px 8px;
+    gap:10px;
+    min-height:0;
+  }
+  .battle-side.left{align-items:center;}
+  .battle-side.right{align-items:center;}
+
+  /* HUD bar */
+  .hud{
+    display:flex; justify-content:space-between; align-items:center;
+    gap:14px; padding:10px 16px; width:100%; flex-shrink:0;
+    position:relative; z-index:3;
+    background:linear-gradient(to bottom, rgba(22,24,29,.98), rgba(22,24,29,.7));
+    border-bottom:1px solid rgba(255,255,255,.06);
+  }
+  .fighter-hud{width:34%; min-width:200px;}
+  .hud-name{
+    font-family:var(--f-display); font-size:.8rem; font-weight:800;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--c-text);
+    margin-bottom:5px;
+  }
+
+  /* HP Bar */
+  .bar{
+    height:13px;
+    background:rgba(255,255,255,.08);
+    border-radius:999px;
+    overflow:hidden;
+    border:none;
+    position:relative;
+  }
+  .bar > div{
+    height:100%; width:100%;
+    background:linear-gradient(to right, var(--c-orange-dk), var(--c-orange), var(--c-orange-lt));
+    box-shadow:0 0 8px rgba(255,122,26,.4);
+    transition:width .18s ease-out;
+    border-radius:999px;
+  }
+  #playerHpFill.low-hp{animation:hp-blink .8s ease-in-out infinite;}
+  #playerHpFill.critical{
+    background:linear-gradient(to right, #c01010, var(--c-danger), #ff6060) !important;
+    box-shadow:0 0 10px rgba(232,64,64,.6) !important;
+    animation:hp-blink .8s ease-in-out infinite;
+  }
+  #enemyHpFill{
+    background:linear-gradient(to left, #1a6080, #3aa0c0, #7acce0);
+    box-shadow:0 0 8px rgba(58,160,192,.4);
+  }
+  #enemyHpFill.low-hp{animation:hp-blink .8s ease-in-out infinite;}
+  #enemyHpFill.critical{
+    background:linear-gradient(to left, #c01010, var(--c-danger), #ff6060) !important;
+    box-shadow:0 0 10px rgba(232,64,64,.6) !important;
+  }
+  @keyframes hp-blink{0%,100%{opacity:1}50%{opacity:.6}}
+
+  /* Super gauge */
+  .super-bar-wrap{margin-top:4px; display:flex; align-items:center; gap:5px;}
+  .super-bar{height:6px; background:rgba(255,255,255,.08); border-radius:999px; overflow:hidden; width:80px;}
+  .super-bar > div{height:100%; width:0%; background:linear-gradient(to right, #3a8080, #5ac8c8); transition:width .2s ease; border-radius:999px;}
+  .super-label{
+    font-family:var(--f-display); font-size:.6rem; font-weight:700;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--c-midgray);
+  }
+
+  /* Center HUD: round/timer */
+  .center-status{text-align:center; min-width:160px;}
+  .round{
+    font-family:var(--f-display); font-size:.62rem; font-weight:700;
+    letter-spacing:.18em; text-transform:uppercase; color:var(--c-midgray);
+  }
+  .score-display{
+    font-family:var(--f-mono); font-size:1rem; font-weight:900;
+    color:var(--c-orange-lt); margin-top:1px; letter-spacing:.04em;
+  }
+  #timerDisplay{
+    font-family:var(--f-mono); font-size:clamp(22px,4vw,32px);
+    font-weight:900; color:var(--c-text); letter-spacing:.02em;
+    text-shadow:none; transition:color .2s;
+  }
+  #timerDisplay.warn{color:var(--c-orange); animation:timerWarn .8s ease-in-out infinite;}
+  @keyframes timerWarn{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.75;transform:scale(1.07);}}
+
+  /* Combo display */
+  .combo{
+    font-family:var(--f-display); font-size:clamp(18px,3.5vw,28px);
+    font-weight:900; min-height:32px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--c-orange);
+    text-shadow:0 0 14px rgba(255,122,26,.8);
+    transform:scale(1); transition:transform .15s ease;
+  }
+  .combo.pop{animation:combo-pop .2s ease;}
+  @keyframes combo-pop{0%{transform:scale(1)}50%{transform:scale(1.25)}100%{transform:scale(1)}}
+
+  /* Arena overlays */
+  .screen-edge-warn{position:absolute; inset:0; pointer-events:none; z-index:6; box-shadow:inset 0 0 80px 20px rgba(232,64,64,.35); opacity:0; animation:edge-flash .6s ease;}
+  @keyframes edge-flash{0%{opacity:.8}100%{opacity:0}}
+  .flash-overlay{position:absolute; inset:0; pointer-events:none; z-index:18; background:rgba(255,255,255,.75); opacity:0;}
+
+  /* Round/Fight overlay */
+  .round-fight-overlay{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:20; pointer-events:none;}
+  .round-fight-overlay .big-text{
+    font-family:var(--f-display); font-size:clamp(48px,12vw,120px);
+    font-weight:900; text-transform:uppercase; color:var(--c-text);
+    text-shadow:0 0 40px rgba(255,122,26,.5);
+    opacity:0; transform:scale(0.5);
+  }
+  .round-fight-overlay .big-text.show{animation:round-fight-in .5s cubic-bezier(.22,1,.36,1) forwards;}
+  .round-fight-overlay .big-text.fight{animation:fight-in .35s cubic-bezier(.22,1,.36,1) forwards;}
+  @keyframes round-fight-in{0%{opacity:0;transform:scale(0.5)}55%{opacity:1;transform:scale(1.08)}100%{opacity:1;transform:scale(1)}}
+  @keyframes fight-in{0%{opacity:0;transform:scale(0.3)}65%{opacity:1;transform:scale(1.15)}100%{opacity:1;transform:scale(1)}}
+
+  /* K.O. overlay */
+  .ko-overlay{position:absolute; inset:0; display:none; align-items:center; justify-content:center; z-index:25; pointer-events:none; background:rgba(0,0,0,.45);}
+  .ko-overlay.show{display:flex;}
+  .ko-overlay .ko-text{
+    font-family:var(--f-display); font-size:clamp(64px,18vw,160px);
+    font-weight:900; text-transform:uppercase; letter-spacing:.12em;
+    background:linear-gradient(to bottom right, #fff, var(--c-orange-lt));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    animation:ko-in .35s cubic-bezier(.22,1,.36,1) forwards; transform:scale(0);
+  }
+  @keyframes ko-in{0%{transform:scale(2.2);opacity:0;}55%{opacity:1;transform:scale(.95);}75%{transform:scale(1.04);}100%{transform:scale(1);opacity:1;}}
+
+  /* Arena & Canvas */
+  #arenaWrap{
+    position:relative;
+    flex:1 1 0;
+    min-height:0;
+    overflow:hidden;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.06);
+    background:#0f1116;
+  }
+  canvas{position:absolute; top:0; left:0; width:100%; height:100%;}
+  .toast{
+    position:absolute; top:88px; left:50%; transform:translateX(-50%); z-index:5;
+    background:rgba(22,24,29,.88); padding:7px 16px; border-radius:var(--r-pill);
+    border:1px solid rgba(255,122,26,.3); color:var(--c-orange-lt);
+    font-family:var(--f-display); font-size:.72rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+    opacity:0; transition:opacity .18s ease;
+  }
+  .toast.show{opacity:1;}
+  .floating-dmg{position:absolute; font-family:var(--f-mono); font-weight:900; pointer-events:none; text-shadow:0 0 10px rgba(255,122,26,.5); z-index:5;}
+
+  /* Pause */
+  .pause-overlay{position:absolute; inset:0; background:rgba(0,0,0,.8); display:none; align-items:center; justify-content:center; z-index:30; pointer-events:auto;}
+  .pause-overlay.show{display:flex;}
+  .pause-panel{
+    background:var(--c-charcoal); border:2px solid var(--c-orange);
+    border-radius:var(--r-card); padding:28px; text-align:center; min-width:260px;
+    box-shadow:var(--sh-orange);
+  }
+  .pause-panel h3{
+    font-family:var(--f-display); font-size:1rem; font-weight:800;
+    letter-spacing:.15em; text-transform:uppercase; color:var(--c-text); margin:0 0 18px;
+  }
+  .pause-panel .menu-buttons{gap:12px; justify-content:center; margin-top:14px;}
+  .pause-btn{
+    position:absolute; top:12px; right:12px; width:40px; height:40px;
+    padding:0; border-radius:var(--r-pill); font-size:16px; z-index:31;
+    min-width:auto; background:rgba(43,45,49,.9); border:1px solid var(--c-midgray);
+    color:var(--c-lightgray); box-shadow:none;
+  }
+  .pause-btn:hover{border-color:var(--c-orange); color:var(--c-orange); box-shadow:none;}
+
+  /* ============================================================
+     BATTLE CONTROLLER UI (Switch-like side panels)
+  ============================================================ */
+  .joystick-wrap{flex-shrink:0; touch-action:none; display:flex; flex-direction:column; align-items:center;}
+  .joystick-base{
+    width:120px; height:120px; border-radius:50%;
+    background:rgba(0,0,0,.65); border:2px solid var(--c-orange);
+    display:flex; align-items:center; justify-content:center; position:relative;
+    box-shadow:inset 0 0 20px rgba(255,122,26,.1), 0 0 10px rgba(255,122,26,.15);
+  }
+  .joystick-stick{
+    width:48px; height:48px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, rgba(255,255,255,.25), transparent 60%),
+               linear-gradient(180deg, var(--c-orange-lt), var(--c-orange-dk));
+    border:2px solid rgba(255,255,255,.35);
+    position:absolute; left:50%; top:50%; margin-left:-24px; margin-top:-24px;
+    pointer-events:none; transition:transform .06s ease-out; transform:translate(0,0);
+    box-shadow:0 4px 12px rgba(0,0,0,.5);
+  }
+
+  /* Diamond pad buttons */
+  .diamond-pad-wrap{display:flex; flex-direction:column; align-items:center; gap:8px; flex-shrink:0;}
+  .diamond-pad{position:relative; width:210px; height:210px;}
+  .dp-btn{
+    position:absolute; width:76px; height:76px; border-radius:50%;
+    border:2px solid rgba(255,255,255,.2); font-family:var(--f-display);
+    font-size:.7rem; font-weight:900; letter-spacing:.04em; text-transform:uppercase;
+    line-height:1.2; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    box-shadow:0 5px 16px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.2);
+    -webkit-tap-highlight-color:transparent; touch-action:manipulation; cursor:pointer;
+    transition:transform .08s cubic-bezier(.34,1.56,.64,1), box-shadow .08s ease;
+    user-select:none;
+  }
+  .dp-btn:active,.dp-btn.pressed{
+    transform:scale(0.82) translateY(3px) !important;
+    box-shadow:0 2px 8px rgba(0,0,0,.6), inset 0 2px 4px rgba(0,0,0,.4) !important;
+  }
+  .dp-btn.spring{animation:dp-spring .25s cubic-bezier(.34,1.56,.64,1) forwards;}
+  @keyframes dp-spring{0%{transform:scale(0.82) translateY(3px)}60%{transform:scale(1.08) translateY(-2px)}100%{transform:scale(1) translateY(0)}}
+
+  /* Button color scheme — updated with Orange × Gray palette tones */
+  .dp-top{   left:67px; top:0;    background:radial-gradient(circle at 35% 30%, rgba(255,200,100,.9), var(--c-orange-dk)); color:#2a1000;}
+  .dp-left{  left:0;    top:67px; background:radial-gradient(circle at 35% 30%, rgba(255,180,80,.9),  var(--c-orange));    color:#2a1000;}
+  .dp-right{ left:134px;top:67px; background:radial-gradient(circle at 35% 30%, rgba(255,210,120,.9), var(--c-orange-dk)); color:#2a1000;}
+  .dp-bottom{left:67px; top:134px;background:radial-gradient(circle at 35% 30%, rgba(232,100,64,.9),  var(--c-danger));    color:#1a0000;}
+
+  .dp-super{
+    width:180px; height:46px; border-radius:var(--r-pill);
+    font-family:var(--f-display); font-size:.78rem; font-weight:800;
+    letter-spacing:.15em; text-transform:uppercase;
+    background:rgba(255,255,255,.07); color:rgba(255,255,255,.4);
+    border:1.5px solid rgba(255,255,255,.15);
+    box-shadow:none;
+    -webkit-tap-highlight-color:transparent; touch-action:manipulation; cursor:pointer;
+    transition:transform .08s cubic-bezier(.34,1.56,.64,1), box-shadow .08s ease, opacity .1s;
+    user-select:none; opacity:.45;
+  }
+  .dp-super:not(:disabled){
+    opacity:1; background:var(--c-orange);
+    border-color:var(--c-orange-lt); color:#fff;
+    box-shadow:var(--sh-orange);
+  }
+  .dp-super:active,.dp-super.pressed{transform:scale(0.88) translateY(2px) !important; box-shadow:0 2px 8px rgba(0,0,0,.5) !important;}
+  .dp-super.spring{animation:dp-spring .25s cubic-bezier(.34,1.56,.64,1) forwards;}
+
+  .mini{
+    text-align:center; font-family:var(--f-display); font-size:.6rem;
+    font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--c-midgray); margin-top:7px;
+  }
+  .move-pad{
+    display:grid;
+    grid-template-columns:repeat(3, 54px);
+    grid-template-rows:repeat(3, 44px);
+    gap:6px;
+    user-select:none;
+  }
+  .move-btn{
+    border-radius:10px;
+    border:1.5px solid rgba(255,255,255,.22);
+    background:rgba(255,255,255,.06);
+    color:var(--c-lightgray);
+    box-shadow:none;
+    font-family:var(--f-display);
+    font-size:.72rem;
+    font-weight:800;
+    letter-spacing:.08em;
+    padding:0;
+    min-width:0;
+    min-height:0;
+    text-transform:uppercase;
+  }
+  .move-btn:active,.move-btn.pressed{
+    transform:scale(0.94);
+    border-color:var(--c-orange);
+    color:#fff;
+    background:rgba(255,122,26,.18);
+  }
+  .move-up{grid-column:2;grid-row:1;}
+  .move-left{grid-column:1;grid-row:2;}
+  .move-down{grid-column:2;grid-row:2;}
+  .move-right{grid-column:3;grid-row:2;}
+  .controls-note{color:var(--c-midgray); font-family:var(--f-body); font-size:.72rem; line-height:1.5;}
+
+  /* ============================================================
+     ENDING / RESULT SCREEN
+  ============================================================ */
+  #endingScreen .panel{padding:28px; width:min(820px,92vw); text-align:center; position:relative; z-index:2;}
+  #endingScreen .menu-buttons{position:relative; z-index:3;}
+  #endingScreen button{cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent;}
+  #resultTitle{
+    font-family:var(--f-display); font-size:clamp(28px,5.5vw,56px);
+    font-weight:900; letter-spacing:.06em; text-transform:uppercase;
+    background:linear-gradient(to bottom right, #fff, var(--c-orange-lt));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    margin:0 0 8px;
+  }
+  #resultSub{
+    font-family:var(--f-display); font-size:.85rem; font-weight:700;
+    letter-spacing:.12em; text-transform:uppercase; color:var(--c-midgray);
+  }
+  .summary{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:18px 0; text-align:left;}
+  .summary .item{
+    padding:13px 16px; border-radius:10px;
+    background:rgba(22,24,29,.7); color:var(--c-lightgray);
+    border:1px solid rgba(255,255,255,.07);
+    font-family:var(--f-body); font-size:.85rem;
+  }
+  .victory-badge{
+    font-family:var(--f-display); font-size:clamp(18px,3.5vw,28px);
+    font-weight:900; letter-spacing:.12em; text-transform:uppercase;
+    margin:6px 0;
+  }
+  .victory-badge.perfect{color:var(--c-orange); text-shadow:var(--sh-orange);}
+  .victory-badge.great{color:var(--c-ok);}
+  #victoryQuote{
+    font-family:var(--f-body); font-size:clamp(14px,2.2vw,19px);
+    font-style:italic; color:var(--c-lightgray);
+    margin:14px 0 0; padding:12px 18px;
+    background:rgba(0,0,0,.2); border-radius:10px;
+    border-left:3px solid var(--c-orange-dk);
+  }
+  .opponent-row{display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap;}
+  .opponent-label{font-family:var(--f-display); font-size:.62rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--c-midgray);}
+  .opponent-grid{display:flex; flex-wrap:wrap; gap:8px;}
+  .opponent-btn{
+    font-family:var(--f-display); font-size:.62rem; padding:5px 12px; border-radius:7px;
+    border:1.5px solid var(--c-midgray); background:transparent;
+    color:var(--c-lightgray); box-shadow:none;
+  }
+  .opponent-btn.selected{border-color:var(--c-orange); color:var(--c-orange-lt); box-shadow:0 0 10px rgba(255,122,26,.3);}
+
+  /* ============================================================
+     MODAL (技表)
+  ============================================================ */
+  .modal-overlay{position:fixed; inset:0; background:rgba(0,0,0,.75); display:none; align-items:center; justify-content:center; z-index:100; padding:20px;}
+  .modal-overlay.show{display:flex;}
+  .modal-panel{
+    background:var(--c-charcoal); border:2px solid var(--c-orange);
+    border-radius:var(--r-card); padding:24px;
+    max-width:420px; max-height:85vh; overflow-y:auto;
+    box-shadow:var(--sh-orange);
+  }
+  .modal-panel h3{
+    font-family:var(--f-display); font-size:.95rem; font-weight:800;
+    letter-spacing:.12em; text-transform:uppercase; color:var(--c-text); margin:0 0 16px;
+  }
+  .modal-panel .move-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:7px 0; border-bottom:1px solid rgba(255,255,255,.05);
+    font-family:var(--f-body); font-size:.82rem;
+  }
+  .modal-panel .move-name{font-weight:700; color:var(--c-text);}
+  .modal-panel .move-cmd{color:var(--c-midgray); font-family:var(--f-mono); font-size:.78rem;}
+
+  /* ============================================================
+     ARCADE / STORY ENDING
+  ============================================================ */
+  .arcade-progress-bar{
+    font-family:var(--f-display); font-size:.6rem; font-weight:700;
+    letter-spacing:.2em; text-transform:uppercase;
+    color:rgba(255,122,26,.5); margin-top:10px; text-align:right;
+  }
+  #arcadeEndingScreen{
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 30%, rgba(232,93,4,.14) 0%, transparent 65%),
+      linear-gradient(160deg, #16181d 0%, #1a1c22 50%, #16181d 100%) !important;
+  }
+  #arcadeEndingScreen.active{
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 30%, rgba(232,93,4,.14) 0%, transparent 65%),
+      linear-gradient(160deg, #16181d 0%, #1a1c22 50%, #16181d 100%) !important;
+  }
+  .arcade-end-panel{padding:36px; width:min(900px,94vw);}
+  .arcade-end-title{
+    font-family:var(--f-display); font-size:clamp(12px,2vw,17px);
+    font-weight:800; letter-spacing:.3em; text-transform:uppercase;
+    color:var(--c-orange-lt); margin-bottom:28px; text-align:center;
+    text-shadow:0 0 18px rgba(255,122,26,.5);
+  }
+  .arcade-end-layout{display:flex; gap:32px; align-items:center; flex-wrap:wrap; justify-content:center; margin-bottom:24px;}
+  .arcade-end-portrait{
+    width:min(200px,32vw); height:min(280px,45vw);
+    border-radius:16px; flex-shrink:0;
+    border:2px solid var(--c-orange); box-shadow:var(--sh-orange);
+    background-size:500% 500%; background-repeat:no-repeat;
+  }
+  .arcade-end-text{flex:1; min-width:240px;}
+  .arcade-end-char-name{
+    font-family:var(--f-display); font-size:clamp(14px,2.3vw,20px);
+    font-weight:800; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--c-orange-lt); margin-bottom:18px;
+  }
+  .arcade-end-body{
+    font-family:var(--f-body); font-size:clamp(13px,1.7vw,16px);
+    line-height:2.1; color:var(--c-lightgray);
+    white-space:pre-wrap; font-weight:400;
+  }
+
+  /* ============================================================
+     iOS LANDSCAPE PROMPT OVERLAY
+  ============================================================ */
+  #ios-rotate-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--c-bg);
+    flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 24px;
+    text-align: center;
+    padding: 40px;
+  }
+  #ios-rotate-overlay.show { display: flex; }
+  .rotate-icon {
+    font-size: 4.5em;
+    animation: rotateSpin 1.8s ease-in-out infinite;
+  }
+  @keyframes rotateSpin {
+    0%,100% { transform: rotate(-20deg); }
+    50%      { transform: rotate(20deg); }
+  }
+  .rotate-title {
+    font-family: var(--f-display); font-size: 1.4rem; font-weight: 800;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--c-text);
+  }
+  .rotate-sub {
+    font-family: var(--f-body); font-size: .85rem;
+    color: var(--c-midgray); line-height: 1.6; max-width: 280px;
+  }
+  .rotate-border {
+    width: 72px; height: 4px; border-radius: 2px;
+    background: linear-gradient(to right, var(--c-orange-dk), var(--c-orange-lt));
+  }
+
+  /* ============================================================
+     iOS AUDIO UNLOCK BANNER
+  ============================================================ */
+  #ios-audio-banner {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    z-index: 8000;
+    background: rgba(43,45,49,.96);
+    border-top: 2px solid var(--c-orange);
+    padding: 14px 24px;
+    align-items: center; justify-content: center; gap: 14px;
+    cursor: pointer;
+    animation: bannerSlideUp .3s ease-out both;
+  }
+  #ios-audio-banner.show { display: flex; }
+  @keyframes bannerSlideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  .audio-banner-icon { font-size: 1.5em; animation: speakerPulse 1.2s ease-in-out infinite; }
+  @keyframes speakerPulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .audio-banner-text {
+    font-family: var(--f-display); font-size: .82rem; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--c-text);
+  }
+  .audio-banner-btn {
+    background: var(--c-orange); color: #fff;
+    font-family: var(--f-display); font-size: .72rem; font-weight: 800;
+    letter-spacing: .1em; text-transform: uppercase;
+    padding: 7px 18px; border-radius: var(--r-pill);
+    border: 1px solid var(--c-orange-lt);
+    box-shadow: var(--sh-orange);
+    pointer-events: none; /* banner itself handles click */
+  }
+
+  /* ============================================================
+     RESPONSIVE
+  ============================================================ */
+  @media (max-width:900px){.summary{grid-template-columns:1fr}}
+  @media (max-width:700px){
+    .sel-panel{width:80px;padding:10px 5px;}
+    .sel-portrait-big{width:62px;height:78px;}
+    .sel-char-name{font-size:.58rem;}
+    .sel-char-flavor,.sel-stat-bars,.sel-char-type{display:none;}
+    .sel-card{min-height:55px;}
+  }
+  @media(max-width:420px){
+    .sel-panel{width:60px;}
+    .sel-portrait-big{width:48px;height:60px;}
+  }
+  @media (max-width:560px){
+    .char-grid{flex-wrap:wrap; justify-content:center;}
+    .card{min-width:86px; max-width:92px;}
+    .select-preview{flex-direction:column; align-items:flex-start;}
+  }
+  @media (max-width:640px){
+    .hud{gap:8px; padding:7px 10px;}
+    .fighter-hud{width:38%; min-width:0;}
+    .bar{height:10px;}
+    .battle-main{grid-template-columns:minmax(120px, 31vw) minmax(0,1fr) minmax(140px, 34vw); gap:6px; padding:6px;}
+    .battle-side{padding:6px 4px; gap:6px; border-radius:10px;}
+    .joystick-base{width:88px; height:88px;}
+    .joystick-stick{width:36px; height:36px; margin-left:-18px; margin-top:-18px;}
+    .diamond-pad{width:160px; height:160px;}
+    .dp-btn{width:58px; height:58px; font-size:.6rem;}
+    .dp-top  {left:51px; top:0;}
+    .dp-left {left:0;    top:51px;}
+    .dp-right{left:102px;top:51px;}
+    .dp-bottom{left:51px;top:102px;}
+    .dp-super{width:150px; height:38px; font-size:.68rem;}
+    .move-pad{grid-template-columns:repeat(3, 42px); grid-template-rows:repeat(3, 34px); gap:4px;}
+    .move-btn{font-size:.62rem;}
+    .mini{display:none;}
+  }
+  @media (max-height:500px){
+    .hud{padding:4px 10px;}
+    .bar{height:8px;}
+    .super-bar-wrap{display:none;}
+    .battle-main{grid-template-columns:minmax(110px, 26vw) minmax(0,1fr) minmax(120px, 30vw);}
+    .joystick-base{width:72px; height:72px;}
+    .joystick-stick{width:30px; height:30px; margin-left:-15px; margin-top:-15px;}
+    .diamond-pad{width:130px; height:130px;}
+    .dp-btn{width:46px; height:46px; font-size:.55rem;}
+    .dp-top  {left:42px; top:0;}
+    .dp-left {left:0;    top:42px;}
+    .dp-right{left:84px; top:42px;}
+    .dp-bottom{left:42px;top:84px;}
+    .dp-super{width:120px; height:32px; font-size:.6rem;}
+    .move-pad{grid-template-columns:repeat(3, 36px); grid-template-rows:repeat(3, 28px); gap:3px;}
+    .mini{display:none;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <section id="startScreen" class="screen active center">
+    <div class="title-wrap panel">
+      <h1 class="logo">BATTLE ARENA</h1>
+      <div class="subtitle">Neon Retro Fighters · Season 01</div>
+      <p class="title-tagline">地下都市の闘技場で、運命を賭けた一騎討ちが始まる。</p>
+      <div class="menu-buttons">
+        <button id="startBtn">▶&nbsp;&nbsp;START GAME</button>
+      </div>
+      <div class="volume-row">
+        <label>BGM</label><input type="range" id="bgmVol" min="0" max="100" value="80">
+        <label>SE</label><input type="range" id="seVol" min="0" max="100" value="100">
+      </div>
+    </div>
+  </section>
+  <audio id="bgm" loop></audio>
+  <div id="ios-rotate-overlay" aria-hidden="true">
+    <div class="rotate-icon">📱↻</div>
+    <div class="rotate-border"></div>
+    <div class="rotate-title">横向きでプレイしてください</div>
+    <div class="rotate-sub">iPhone / iPad では横画面で操作しやすくなります。</div>
+  </div>
+  <div id="ios-audio-banner" role="button" tabindex="0" aria-label="音声を有効化">
+    <div class="audio-banner-icon">🔊</div>
+    <div class="audio-banner-text">タップして音を有効化</div>
+    <div class="audio-banner-btn">ENABLE</div>
+  </div>
+
+  <section id="storyScreen" class="screen center">
+    <div class="panel">
+      <div class="story-head">— STORY —</div>
+      <div class="story-char-name" id="storyCharName"></div>
+      <div class="story-layout">
+        <div class="story-portrait" id="storyPortrait"></div>
+        <div id="storyText"></div>
+      </div>
+      <div class="story-footer">
+        <span class="story-page" id="storyPage">1 / 3</span>
+        <div class="top-actions">
+          <button id="storyNextBtn">NEXT</button>
+        </div>
+      </div>
+      <div class="arcade-progress-bar" id="arcadeProgress" style="display:none;"></div>
+    </div>
+  </section>
+
+  <section id="selectScreen" class="screen">
+    <div class="sel-bg" id="selBg"></div>
+    <div class="sel-layout">
+      <div class="sel-panel sel-panel-left">
+        <div class="sel-player-tag">P 1</div>
+        <div class="sel-portrait-big" id="selPortraitL"></div>
+        <div class="sel-char-name" id="selNameL">—</div>
+        <div class="sel-char-type" id="selTypeL"></div>
+        <div class="sel-stat-bars" id="selStatsL"></div>
+        <p class="sel-char-flavor" id="selFlavorL"></p>
+      </div>
+      <div class="sel-center">
+        <div class="sel-title-row"><span class="sel-heading">SELECT YOUR FIGHTER</span></div>
+        <div id="charGrid" class="sel-char-grid"></div>
+        <div class="sel-cpu-row">
+          <span class="sel-cpu-label">CPU</span>
+          <div id="opponentGrid" class="sel-opp-grid"></div>
+        </div>
+        <div class="sel-bottom">
+          <div class="sel-diff-row">
+            <span class="sel-diff-label">DIFFICULTY</span>
+            <div id="difficultyRow" class="difficulty-row">
+              <button type="button" class="difficulty-btn panel" data-difficulty="easy">EASY</button>
+              <button type="button" class="difficulty-btn panel selected" data-difficulty="normal">NORMAL</button>
+              <button type="button" class="difficulty-btn panel" data-difficulty="hard">HARD</button>
+            </div>
+          </div>
+          <div class="sel-actions-row">
+            <button id="confirmSelectBtn" class="sel-fight-btn">⚡&nbsp;&nbsp;FIGHT!</button>
+            <button id="storyModeBtn" class="sel-story-btn">STORY MODE</button>
+            <button id="howToPlayBtn" class="ghost small">技表</button>
+            <button id="backToTitleBtn" class="ghost small">← BACK</button>
+          </div>
+        </div>
+      </div>
+      <div class="sel-panel sel-panel-right">
+        <div class="sel-player-tag sel-tag-cpu">CPU</div>
+        <div class="sel-portrait-big" id="selPortraitR"></div>
+        <div class="sel-char-name" id="selNameR">—</div>
+        <div class="sel-char-type" id="selTypeR"></div>
+        <div class="sel-stat-bars" id="selStatsR"></div>
+        <p class="sel-char-flavor" id="selFlavorR"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="vsScreen" class="screen center">
+    <div id="vsPlayerPortrait" class="vs-portrait vs-slide-left"></div>
+    <div class="vs-center">
+      <div class="vs-label">VS</div>
+      <div id="vsCountdown" class="vs-countdown"></div>
+    </div>
+    <div id="vsEnemyPortrait" class="vs-portrait vs-slide-right"></div>
+  </section>
+
+  <section id="battleScreen" class="screen">
+    <div class="hud">
+      <div class="fighter-hud">
+        <div id="playerHudName" class="hud-name">PLAYER</div>
+        <div class="bar"><div id="playerHpFill"></div></div>
+        <div class="super-bar-wrap"><div class="super-bar"><div id="playerSuperFill"></div></div><span class="super-label">SUPER</span></div>
+      </div>
+      <div class="center-status">
+        <div class="round" id="roundText">ROUND 1</div>
+        <div class="score-display" id="scoreDisplay">0 - 0</div>
+        <div id="timerDisplay">99</div>
+        <div class="combo" id="comboText"></div>
+      </div>
+      <div class="fighter-hud" style="text-align:right">
+        <div id="enemyHudName" class="hud-name">ENEMY</div>
+        <div class="bar"><div id="enemyHpFill"></div></div>
+        <div class="super-bar-wrap"><div class="super-bar"><div id="enemySuperFill"></div></div></div>
+      </div>
+    </div>
+
+    <div class="battle-main">
+      <div class="battle-side left">
+        <div id="joystickWrap" class="joystick-wrap">
+          <div id="joystickBase" class="joystick-base">
+            <div id="joystickStick" class="joystick-stick"></div>
+          </div>
+        </div>
+        <div class="move-pad" aria-label="move buttons">
+          <button type="button" class="move-btn move-up" data-move="up">↑</button>
+          <button type="button" class="move-btn move-left" data-move="left">←</button>
+          <button type="button" class="move-btn move-down" data-move="down">↓</button>
+          <button type="button" class="move-btn move-right" data-move="right">→</button>
+        </div>
+        <div class="mini" style="margin-top:0;">
+          <div id="statusLine">Ready.</div>
+        </div>
+      </div>
+
+      <div id="arenaWrap">
+        <canvas id="gameCanvas" width="1280" height="720"></canvas>
+        <!-- オーバーレイ類はarenaWrap内に配置（キャンバス座標系に合わせるため） -->
+        <div class="round-fight-overlay" id="roundFightOverlay">
+          <div class="big-text" id="roundFightText">ROUND 1</div>
+        </div>
+        <div class="ko-overlay" id="koOverlay">
+          <div class="ko-text">K.O!</div>
+        </div>
+        <div class="screen-edge-warn" id="screenEdgeWarn"></div>
+        <div class="flash-overlay" id="flashOverlay"></div>
+        <div class="toast" id="battleToast"></div>
+        <div class="pause-overlay" id="pauseOverlay">
+          <div class="pause-panel panel">
+            <h3>PAUSED</h3>
+            <div class="menu-buttons">
+              <button id="resumeBtn">▶ RESUME</button>
+              <button id="giveUpBtn" class="alt">GIVE UP</button>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="pause-btn panel" id="pauseBtn" title="ポーズ" aria-label="ポーズ">Ⅱ</button>
+      </div>
+
+      <div class="battle-side right">
+        <div class="diamond-pad-wrap">
+          <div class="diamond-pad">
+            <button type="button" class="dp-btn dp-top"    data-action="punch_weak">弱<br>P</button>
+            <button type="button" class="dp-btn dp-left"   data-action="kick_weak">弱<br>K</button>
+            <button type="button" class="dp-btn dp-right"  data-action="punch_strong">強<br>P</button>
+            <button type="button" class="dp-btn dp-bottom" data-action="kick_strong">強<br>K</button>
+          </div>
+          <button type="button" class="dp-super" data-action="super" id="superBtn" disabled>SUPER</button>
+        </div>
+        <div class="mini" style="max-width:240px;">
+          <div class="controls-note">A/S/Z/X/D/E/C + 方向キーでも操作できます</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="endingScreen" class="screen center">
+    <div class="panel">
+      <div id="victoryBadge" class="victory-badge" style="display:none"></div>
+      <h2 id="resultTitle">YOU WIN</h2>
+      <div id="resultSub">Knight defeated Samurai</div>
+      <p id="victoryQuote"></p>
+      <div class="summary">
+        <div class="item" id="sumDamage">総ダメージ: 0</div>
+        <div class="item" id="sumCombo">最大コンボ: 0</div>
+        <div class="item" id="sumPunch">パンチ回数: 0</div>
+        <div class="item" id="sumGuard">ガード回数: 0</div>
+      </div>
+      <div class="menu-buttons">
+        <button id="playAgainBtn">REMATCH</button>
+        <button id="returnTitleBtn" class="ghost">← TITLE</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="arcadeEndingScreen" class="screen center">
+    <div class="panel arcade-end-panel">
+      <div class="arcade-end-title">★ CONGRATULATIONS ★</div>
+      <div class="arcade-end-layout">
+        <div class="arcade-end-portrait" id="arcadeEndPortrait"></div>
+        <div class="arcade-end-text">
+          <div class="arcade-end-char-name" id="arcadeEndCharName"></div>
+          <div class="arcade-end-body" id="arcadeEndBody"></div>
+        </div>
+      </div>
+      <div class="menu-buttons">
+        <button id="arcadeEndTitleBtn">← TITLE</button>
+        <button id="arcadeEndPlayAgainBtn" class="ghost">▶ PLAY AGAIN</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="modal-overlay" id="moveListModal">
+    <div class="modal-panel panel">
+      <h3>技表・操作</h3>
+      <div class="move-list">
+        <div class="move-row"><span class="move-name">弱パンチ</span><span class="move-cmd">A / 弱P</span></div>
+        <div class="move-row"><span class="move-name">強パンチ</span><span class="move-cmd">S / 強P</span></div>
+        <div class="move-row"><span class="move-name">弱キック</span><span class="move-cmd">Z / 弱K</span></div>
+        <div class="move-row"><span class="move-name">強キック</span><span class="move-cmd">X / 強K</span></div>
+        <div class="move-row"><span class="move-name">必殺技</span><span class="move-cmd">↓↘→+P or K / D</span></div>
+        <div class="move-row"><span class="move-name">SUPER</span><span class="move-cmd">ゲージ100%で E / SUPER</span></div>
+        <div class="move-row"><span class="move-name">投げ</span><span class="move-cmd">近距離で C</span></div>
+        <div class="move-row"><span class="move-name">ガード</span><span class="move-cmd">← 方向</span></div>
+        <div class="move-row"><span class="move-name">しゃがみ</span><span class="move-cmd">↓ 方向</span></div>
+        <div class="move-row"><span class="move-name">ジャンプ</span><span class="move-cmd">↑ 方向</span></div>
+      </div>
+      <div class="menu-buttons" style="margin-top:16px">
+        <button id="closeMoveListBtn" class="small">閉じる</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="stages.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  // ========== CONFIG ==========
+  const ARENA_WIDTH = 1280;
+  const SPRITE_COLS = 5, SPRITE_ROWS = 5;
+  const ATTACK_STATES = ['punch_weak','punch_strong','kick_weak','kick_strong','special','super'];
+  const STICK_THRESHOLD_BACK = 0.3;
+  const STICK_THRESHOLD_FORWARD = 0.35;
+  const STICK_THRESHOLD_UP = 0.35;
+  const STICK_THRESHOLD_DOWN = 0.35;
+  const STICK_VISUAL_RADIUS = 28;
+  const CROSSOVER_MIN_DIST = 60;
+  const WALK_SPEED = 320;
+  const PLAYER_BASE_LEFT = 260;
+  const PLAYER_MAX_X = 800;
+  const ENEMY_BASE_RIGHT = 980;
+
+  const MOVE_CONFIG = {
+    punch_weak:  { startup:0.05, damage:[6,10],  duration:0.28, cooldown:0.32, attackWindow:0.14, lunge:18, hitRange:65,  hitRangeY:62 },
+    punch_strong:{ startup:0.10, damage:[12,17], duration:0.38, cooldown:0.52, attackWindow:0.2,  lunge:26, hitRange:75,  hitRangeY:68 },
+    kick_weak:   { startup:0.07, damage:[9,13],  duration:0.36, cooldown:0.44, attackWindow:0.18, lunge:28, hitRange:85,  hitRangeY:72 },
+    kick_strong: { startup:0.13, damage:[14,21], duration:0.48, cooldown:0.68, attackWindow:0.24, lunge:38, hitRange:95,  hitRangeY:76 },
+    special:     { startup:0.08, damage:[18,26], duration:0.4,  cooldown:0.6,  attackWindow:0.22, lunge:35, hitRange:82,  hitRangeY:70 },
+    super:       { startup:0.06, damage:[28,38], duration:0.5,  cooldown:0.9,  attackWindow:0.28, lunge:45, hitRange:92,  hitRangeY:76 },
+  };
+  // キャラクター固有必殺技
+  const CHAR_SPECIAL_CONFIG = {
+    knight:   { damage:[22,30], hitRange:130, lunge:55, name:'シールドバッシュ' },
+    goblin:   { damage:[12,18], hitRange: 75, lunge:20, name:'毒手連打' },
+    skeleton: { damage:[16,24], hitRange: 95, lunge: 5, name:'ソウルレイ' },
+    samurai:  { damage:[24,32], hitRange:105, lunge:60, name:'居合い斬り' },
+    ninja:    { damage:[15,21], hitRange: 85, lunge:45, name:'分身斬り' },
+    wizard:   { damage:[28,38], hitRange: 80, lunge: 0, name:'魔法弾' },
+    gladiator:{ damage:[20,28], hitRange:125, lunge:50, name:'グラディウス' },
+    pirate:   { damage:[18,26], hitRange:110, lunge:40, name:'曲刀回転斬り' },
+    dragon:   { damage:[26,36], hitRange:115, lunge:10, name:'炎ブレス' },
+    valkyrie: { damage:[19,27], hitRange:100, lunge:50, name:'聖槍突き' },
+  };
+
+  const SUPER_GAUGE_HIT = 8;
+  const SUPER_GAUGE_TAKEN = 5;
+  const HIT_STOP_DURATION = 0.08;
+  const SPECIAL_SEQUENCE = ['down','downfwd','fwd'];
+  const ENEMY_MIN_X = 620;
+
+  function getDirName(sx, sy){
+    const down = sy < -0.3, up = sy > 0.3, fwd = sx > 0.3, back = sx < -0.3;
+    if(down && fwd) return 'downfwd';
+    if(down) return 'down';
+    if(fwd) return 'fwd';
+    if(up) return 'up';
+    if(back) return 'back';
+    return '';
+  }
+  function checkSpecialInput(){
+    const buf = S.inputBuffer || [];
+    const recent = buf.slice(-4).map(entry => entry.dir);
+    const seq = SPECIAL_SEQUENCE.join(',');
+    for(let i = 0; i <= recent.length - 3; i++){
+      if(recent.slice(i, i + 3).join(',') === seq) return true;
+    }
+    return false;
+  }
+  function pushInputDir(){
+    const dir = getDirName(S.stickX, S.stickY);
+    if(!dir) return;
+    S.inputBuffer.push({ dir, time: performance.now() });
+    if(S.inputBuffer.length > 12) S.inputBuffer.shift();
+  }
+
+  const KEY_MAP = { a:'punch_weak', s:'punch_strong', z:'kick_weak', x:'kick_strong', d:'special', e:'super', c:'throw' };
+
+  const storyPages = [
+    '西暦2096年。ネオンに包まれた地下都市では、\n最後の名誉を賭けた闘技大会「BATTLE ARENA」が開催される。',
+    '集められた戦士は10名。\n騎士、忍者、海賊、魔法使い、竜、戦乙女……それぞれが異なる理由で拳を握る。',
+    '勝者に与えられるのは、富でも名声でもない。\n自分の運命を書き換える、たった一度の機会だ。'
+  ];
+
+  const charStories = {
+    knight: {
+      intro: "王が死んだ。国が滅んだ。守るべきものは、もう何もない。\nそれでも剣を持っているのは、誓いの言葉が体に染みついているからだ。\n「最後まで戦え」——誰に言われたのかも、もう思い出せない。\nだから、戦う。戦い続けることが、自分が自分である唯一の証明だから。",
+      ending: "最強の敵を倒した夜、騎士は初めて剣を置いた。\n誰も見ていなかった。歓声もなかった。\nそれでも、胸の中に小さな火が灯っていた。\n「俺は、俺のために戦っていたのかもしれない。」\n誓いは、まだ続く。でも今度は、自分で選んだ誓いだ。"
+    },
+    goblin: {
+      intro: "「どうせお前には無理だ」と、ずっと言われてきた。\n小さいから。醜いから。賢くないから。\nある日、最強の戦士たちが集まる闘技場の噂を聞いた。\n証明したかった。誰かに、ではない。自分自身に。\n「俺は、ここにいる。」",
+      ending: "全員を倒した。でも、誰も謝らなかった。\nゴブリンは少しだけ笑った。\n謝ってほしかったわけじゃないと、気づいたから。\nただ、立っていたかっただけだ。誰よりも高いところに。\n帰り道、初めて鼻歌を歌った。"
+    },
+    skeleton: {
+      intro: "生きていた頃に、何かを憎んでいた。\nでも何を憎んでいたのか、骨になった今は思い出せない。\n怨念だけが残って、体を動かしている。\nもしかしたら、戦えば思い出せるかもしれない。\nその一縷の望みで、拳を握る。",
+      ending: "最後の敵が倒れた瞬間、ふと思い出した。\n愛していた人がいた。その人を守れなかった。\nそれが、怨念の正体だった。\nスケルトンは静かに目を閉じた。\n骨が、少しずつ、光になって消えていった。\nやっと、眠れる。"
+    },
+    samurai: {
+      intro: "師匠が言った。「お前は強すぎる。だから、一人になる。」\nその言葉の意味が、今ならわかる。\n道場はなくなった。弟子もいない。挑んでくる者もいない。\nそれでも刀を磨くのは、強さの先に何かがあると信じているからだ。\n「一番強い者と戦いたい。」——それだけが、今の理由だ。",
+      ending: "最強の敵は、自分とよく似ていた。\n孤独で、不器用で、戦うことしか知らない。\n「お前は何のために戦う？」と問われた。\n侍は長い間、黙っていた。\n「……わからん。だが、お前と戦えてよかった。」\n二人は笑った。久しぶりに、声に出して。"
+    },
+    ninja: {
+      intro: "任務は完了した。依頼人も、組織も、もうない。\n影として生きてきた。名前も、顔も、捨てた。\nある日、子供が言った。「忍者って、本当にいるの？」\nその言葉が、胸に刺さって抜けない。\n「俺は、いる。」——それを確かめるために、今日も戦う。",
+      ending: "全てを制した忍者の前に、その子供が現れた。\n「やっぱり本物だったんだ！」\n忍者は何も言わなかった。でも、仮面の下で笑っていた。\n翌朝、その子供の枕元に、一枚の手裏剣が置いてあった。\n刃はなく、ただ星の形をしていた。"
+    },
+    wizard: {
+      intro: "あらゆる魔法を習得した。あらゆる謎を解いた。\n残ったのは一つの問いだけだ。\n「人はなぜ、わかっていても間違えるのか。」\n書物には答えがない。\nだから、人と戦うことにした。\n拳と拳がぶつかる中に、きっと答えがある。",
+      ending: "最後の敵を倒した後、魔術師は長い時間、座っていた。\n答えは、見つからなかった。\nでも、戦いの中で感じたものがあった。\n怒り、恐れ、そして——不思議と、あたたかいもの。\n「これが、感情か。」\n魔術師は初めて、本を閉じた。"
+    },
+    gladiator: {
+      intro: "闘技場が閉鎖された。観客がいなくなった。\n剣闘士は、初めて静寂の中に立った。\n歓声のない世界で、自分がどれほど空っぽかを知った。\n「俺はまだ戦える。それを、誰かに見せたい。」\n新しい舞台を求めて、旅に出た。",
+      ending: "優勝した瞬間、会場が沸いた。\nでも剣闘士は、一人の少年の目を見ていた。\n歓声の中で、その子だけが静かに頷いていた。\n「あの目で十分だ。」\n剣闘士は初めて、歓声ではなく、一つの視線のために戦えた気がした。"
+    },
+    pirate: {
+      intro: "「世界の果てに、本当の宝がある。」\n老いた船乗りがそう言って死んだ。\n金でも、地図でも、名声でもない宝。\n海賊は笑い飛ばした。でも、捨てられなかった。\n強い者たちを倒し続けている。\n「本当の宝」が何かを、知っている者がいるかもしれないから。",
+      ending: "最後の敵が言った。「お前が探しているものは、もう持っている。」\n海賊は怒鳴った。「何がだ！」\n敵は笑って、倒れた。\n帰りの船の上、満点の星空を見上げて、海賊は気づいた。\n旅そのものが、宝だったのかもしれない。\nでも、認めるのはもう少し先でいい。"
+    },
+    dragon: {
+      intro: "生まれた村を、皆が逃げた。\n俺が生まれたから、ではない。俺が泣いたから、炎が出たのだ。\n「化け物」と呼ばれた。でも化け物に、なりたくはなかった。\n一番強い者を倒せば、何かが変わるかもしれない。\nせめて「強い化け物」になれれば——誰かが認めてくれるかもしれない。",
+      ending: "全てを倒した竜人の前に、一人の老婆が近づいた。\n「あなた、笑ったことある？」\n竜人は答えられなかった。\n老婆は言った。「笑い方は、教えられるものじゃない。おかしいと思った時に、笑えばいい。」\nその夜、竜人は一人で空を見上げて、不格好な声を出した。\nそれが笑いかどうか、わからなかった。でも、悪くなかった。"
+    },
+    valkyrie: {
+      intro: "何千もの魂を、天へ送った。\n英雄も、臆病者も、老人も、子供も。\nみんな「次の世界」へ旅立った。\nある夜、ふと思った。「私は、どこへ行くのだろう。」\n自分のために戦ったことが、一度もない。\nそれが何なのかを知るために、今日だけは、自分のために剣を持つ。",
+      ending: "最後の敵を倒した戦乙女は、泣いていた。\n嬉しいのか、悲しいのか、自分でもわからなかった。\nただ、これが「自分のための戦い」だとわかった。\n翼を広げて、空へ飛んだ。\n行き先は、決めていない。\nそれが、こんなに軽いとは思わなかった。"
+    },
+  };
+
+  const TYPE_LABELS = { speed:'スピード型', power:'パワー型', balance:'バランス型' };
+  const roster = [
+    { id:'knight', name:'Knight', type:'balance', flavor:'古の誓いを胸に、剣と盾で正義を貫く。', winQuote:'名誉ある一戦だった。', atk:95, def:95, spd:90, hp:110, c1:'#7fd7ff', c2:'#1e5ca8', portraitCell:[0,0] },
+    { id:'goblin', name:'Goblin', type:'speed', flavor:'小柄だが素早く、狡知で強者を翻す。', winQuote:'へへっ、俺の勝ちだぜ！', atk:110, def:70, spd:110, hp:85, c1:'#b7ff68', c2:'#35641a', portraitCell:[0,0] },
+    { id:'skeleton', name:'Skeleton', type:'balance', flavor:'亡き者たちの怨念が、骨に宿る。', winQuote:'……骨までしみる敗北だ。', atk:100, def:80, spd:100, hp:95, c1:'#f4f4f4', c2:'#777', portraitCell:[0,0] },
+    { id:'samurai', name:'Samurai', type:'power', flavor:'一刀に己の全てを込める、孤高の剣士。', winQuote:'一刀、終わり。', atk:108, def:88, spd:95, hp:100, c1:'#ff9d6e', c2:'#7c1f1f', portraitCell:[0,0] },
+    { id:'ninja', name:'Ninja', type:'speed', flavor:'闇に溶け、一瞬で仕留める忍び。', winQuote:'……見えなかったか。', atk:105, def:75, spd:115, hp:90, c1:'#d9a9ff', c2:'#33124f', portraitCell:[0,0] },
+    { id:'wizard', name:'Wizard', type:'power', flavor:'古代の魔力を操る、最後の魔術師。', winQuote:'魔力の差だ。', atk:115, def:65, spd:105, hp:80, c1:'#ffeb8a', c2:'#8b2cff', portraitCell:[0,0] },
+    { id:'gladiator', name:'Gladiator', type:'power', flavor:'闘技場の英雄。観衆の歓声が力になる。', winQuote:'観衆よ、これが真の闘いだ！', atk:112, def:92, spd:88, hp:120, c1:'#ffd27c', c2:'#915a14', portraitCell:[0,0] },
+    { id:'pirate', name:'Pirate', type:'balance', flavor:'七つの海を制した、曲刀の使い手。', winQuote:'宝は俺のものだ！', atk:110, def:80, spd:100, hp:105, c1:'#ff8399', c2:'#56253d', portraitCell:[0,0] },
+    { id:'dragon', name:'Dragon', type:'power', flavor:'炎を吐く竜の血を引く戦士。', winQuote:'燃え尽きろ。', atk:118, def:72, spd:98, hp:105, c1:'#ff6b4a', c2:'#8b1a0a', portraitCell:[0,0] },
+    { id:'valkyrie', name:'Valkyrie', type:'balance', flavor:'戦場を駆け、魂を天へ運ぶ乙女。', winQuote:'魂よ、安らかに。', atk:102, def:90, spd:102, hp:115, c1:'#ffe0f0', c2:'#6b2d5c', portraitCell:[0,0] },
+  ];
+
+  const BGM_MAP = { title:'bgm1.mp3', select:'bgm1.mp3', battle:'bgm2.mp3', ending:'bgm3.mp3' };
+  const BGM_THEME = { knight:'bgm2.mp3', goblin:'bgm2.mp3', skeleton:'骸骨奇妙.mp3', samurai:'asiafaghter.mp3', ninja:'asiafaghter.mp3', wizard:'sennninn.mp3', gladiator:'bgm2.mp3', pirate:'桃源のほとりで.mp3', dragon:'bgm2.mp3', valkyrie:'bgm2.mp3' };
+
+  // スプライトシート（5x5グリッド）とキャラの対応
+  // portraitCell: [行, 列] 0始まり。ずれる場合は [0,2] で1行目中央などに変更可能
+  const spriteConfig = {
+    knight: 'Remove_background_from_knight_sprite_sheet-1772627900572.png',
+    goblin: 'Remove_background-1772542906656.png',
+    skeleton: 'Remove_background_from_skeleton_pixel_art_sprite_s-1772629471502.png',
+    samurai: 'うぃ.png',
+    ninja: 'Remove_background_to_create_transparent_PNG-1772629180325.png',
+    wizard: 'Remove_background_from_the_sprite_sheet_image-1772879915201.png',
+    gladiator: 'Remove_background_from_this_sprite_sheet_image_ma-1772630593228.png',
+    pirate: 'Remove_background-1772543159154.png',
+    dragon: 'Remove_background-1772543565754.png',
+    valkyrie: 'Remove_background-1772881225112.png'
+  };
+
+  // ========== DOM ==========
+  const el = {
+    screens: {
+      start: document.getElementById('startScreen'),
+      story: document.getElementById('storyScreen'),
+      select: document.getElementById('selectScreen'),
+      vs: document.getElementById('vsScreen'),
+      battle: document.getElementById('battleScreen'),
+      ending: document.getElementById('endingScreen'),
+      arcadeEnding: document.getElementById('arcadeEndingScreen'),
+    },
+    bgm: document.getElementById('bgm'),
+    bgmVol: document.getElementById('bgmVol'),
+    seVol: document.getElementById('seVol'),
+    vsPlayerPortrait: document.getElementById('vsPlayerPortrait'),
+    vsEnemyPortrait: document.getElementById('vsEnemyPortrait'),
+    vsCountdown: document.getElementById('vsCountdown'),
+    roundFightOverlay: document.getElementById('roundFightOverlay'),
+    roundFightText: document.getElementById('roundFightText'),
+    koOverlay: document.getElementById('koOverlay'),
+    timerDisplay: document.getElementById('timerDisplay'),
+    victoryQuote: document.getElementById('victoryQuote'),
+    startBtn: document.getElementById('startBtn'),
+    storyText: document.getElementById('storyText'),
+    storyNextBtn: document.getElementById('storyNextBtn'),
+    storyPage: document.getElementById('storyPage'),
+    charGrid: document.getElementById('charGrid'),
+    confirmSelectBtn: document.getElementById('confirmSelectBtn'),
+    backToTitleBtn: document.getElementById('backToTitleBtn'),
+    playerHudName: document.getElementById('playerHudName'),
+    enemyHudName: document.getElementById('enemyHudName'),
+    playerHpFill: document.getElementById('playerHpFill'),
+    enemyHpFill: document.getElementById('enemyHpFill'),
+    comboText: document.getElementById('comboText'),
+    roundText: document.getElementById('roundText'),
+    canvas: document.getElementById('gameCanvas'),
+    joystickBase: document.getElementById('joystickBase'),
+    joystickStick: document.getElementById('joystickStick'),
+    statusLine: document.getElementById('statusLine'),
+    battleToast: document.getElementById('battleToast'),
+    resultTitle: document.getElementById('resultTitle'),
+    resultSub: document.getElementById('resultSub'),
+    sumDamage: document.getElementById('sumDamage'),
+    sumCombo: document.getElementById('sumCombo'),
+    sumPunch: document.getElementById('sumPunch'),
+    sumGuard: document.getElementById('sumGuard'),
+    playAgainBtn: document.getElementById('playAgainBtn'),
+    returnTitleBtn: document.getElementById('returnTitleBtn'),
+    arenaWrap: document.getElementById('arenaWrap'),
+    battleScreen: document.getElementById('battleScreen'),
+    playerSuperFill: document.getElementById('playerSuperFill'),
+    enemySuperFill: document.getElementById('enemySuperFill'),
+    scoreDisplay: document.getElementById('scoreDisplay'),
+    superBtn: document.getElementById('superBtn'),
+    screenEdgeWarn: document.getElementById('screenEdgeWarn'),
+    flashOverlay: document.getElementById('flashOverlay'),
+    pauseOverlay: document.getElementById('pauseOverlay'),
+    pauseBtn: document.getElementById('pauseBtn'),
+    resumeBtn: document.getElementById('resumeBtn'),
+    giveUpBtn: document.getElementById('giveUpBtn'),
+    moveListModal: document.getElementById('moveListModal'),
+    howToPlayBtn: document.getElementById('howToPlayBtn'),
+    closeMoveListBtn: document.getElementById('closeMoveListBtn'),
+    victoryBadge: document.getElementById('victoryBadge'),
+    storyPortrait: document.getElementById('storyPortrait'),
+    storyCharName: document.getElementById('storyCharName'),
+    arcadeProgress: document.getElementById('arcadeProgress'),
+    arcadeEndPortrait: document.getElementById('arcadeEndPortrait'),
+    arcadeEndCharName: document.getElementById('arcadeEndCharName'),
+    arcadeEndBody: document.getElementById('arcadeEndBody'),
+    storyModeBtn: document.getElementById('storyModeBtn'),
+    arcadeEndTitleBtn: document.getElementById('arcadeEndTitleBtn'),
+    arcadeEndPlayAgainBtn: document.getElementById('arcadeEndPlayAgainBtn'),
+    iosRotateOverlay: document.getElementById('ios-rotate-overlay'),
+    iosAudioBanner: document.getElementById('ios-audio-banner'),
+  };
+
+  const ctx = el.canvas.getContext('2d');
+  const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  let animationId = 0;
+
+  // ========== STATE ==========
+  const S = {
+    screen: 'start',
+    storyIndex: 0,
+    selectedId: roster[0].id,
+    enemyChoiceId: roster[1].id,
+    player: null,
+    enemy: null,
+    round: 1,
+    playerWins: 0,
+    enemyWins: 0,
+    playerChar: null,
+    enemyChar: null,
+    playerCombo: 0,
+    comboTimer: 0,
+    gameOver: false,
+    superGauge: 0,
+    hitStopRemain: 0,
+    flashRemain: 0,
+    slowMoRemain: 0,
+    shakeRemain: 0,
+    lastTs: 0,
+    aiTimer: 0,
+    stats: { totalDamage:0, maxCombo:0, punch:0, kick:0, guard:0 },
+    sprites: new Map(),
+    toastTimer: 0,
+    debug: false,
+    stickX: 0,
+    stickY: 0,
+    stickPrevUp: false,
+    inputBuffer: [],
+    inputBufferTime: 0,
+    battleTime: 99,
+    roundFightPhase: 'round',
+    roundFightTimer: 0,
+    koShown: false,
+    hitParticles: [],
+    bgmVolume: 0.8,
+    seVolume: 1,
+    previewIdleTicker: 0,
+    paused: false,
+    difficulty: 'normal',
+    arcadeMode: false,
+    arcadeOpponents: [],
+    arcadeIndex: 0,
+    storyMode: 'generic',
+    iosAudioUnlocked: false,
+  };
+
+  const IOS_UA = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let iosAudioContext = null;
+
+  function resizeCanvas(){
+    const wrap = el.arenaWrap;
+    if(!wrap) return;
+    const w = Math.max(320, wrap.clientWidth);
+    const h = Math.max(260, wrap.clientHeight);
+    const cw = Math.floor(w * DPR);
+    const ch = Math.floor(h * DPR);
+    if(el.canvas.width !== cw || el.canvas.height !== ch){
+      el.canvas.width = cw;
+      el.canvas.height = ch;
+      ctx.setTransform(DPR,0,0,DPR,0,0);
+    }
+  }
+
+  function playBGM(src){
+    if(!el.bgm || !src) return;
+    el.bgm.src = src;
+    el.bgm.volume = S.bgmVolume;
+    el.bgm.play().catch(() => {});
+  }
+  function stopBGM(){
+    if(el.bgm) { el.bgm.pause(); el.bgm.currentTime = 0; }
+  }
+  function isPortraitOrientation(){
+    if(typeof window.orientation === 'number'){
+      return Math.abs(window.orientation) !== 90;
+    }
+    if(window.screen && window.screen.orientation && typeof window.screen.orientation.type === 'string'){
+      return window.screen.orientation.type.includes('portrait');
+    }
+    return window.innerHeight >= window.innerWidth;
+  }
+  function updateIOSRotateOverlay(){
+    if(!el.iosRotateOverlay || !IOS_UA) return;
+    const needsRotate = (S.screen === 'battle') && isPortraitOrientation();
+    el.iosRotateOverlay.classList.toggle('show', needsRotate);
+  }
+  async function unlockIOSAudio(){
+    if(!IOS_UA || S.iosAudioUnlocked) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    try{
+      if(!iosAudioContext && AC){
+        iosAudioContext = new AC();
+      }
+      if(iosAudioContext && iosAudioContext.state === 'suspended'){
+        await iosAudioContext.resume();
+      }
+      if(el.bgm){
+        const prevMuted = el.bgm.muted;
+        const prevVolume = el.bgm.volume;
+        const prevTime = el.bgm.currentTime || 0;
+        el.bgm.muted = true;
+        el.bgm.volume = 0;
+        await el.bgm.play();
+        el.bgm.pause();
+        el.bgm.currentTime = prevTime;
+        el.bgm.muted = prevMuted;
+        el.bgm.volume = prevVolume;
+      }
+      S.iosAudioUnlocked = true;
+      if(el.iosAudioBanner) el.iosAudioBanner.classList.remove('show');
+    }catch(_){}
+  }
+  function initIOSHelpers(){
+    if(!IOS_UA) return;
+    if(el.iosAudioBanner){
+      el.iosAudioBanner.classList.add('show');
+      el.iosAudioBanner.addEventListener('click', unlockIOSAudio, { passive: true });
+      el.iosAudioBanner.addEventListener('touchstart', unlockIOSAudio, { passive: true });
+    }
+    window.addEventListener('orientationchange', updateIOSRotateOverlay);
+    window.addEventListener('resize', updateIOSRotateOverlay);
+    document.addEventListener('pointerdown', unlockIOSAudio, { passive: true, once: true });
+    document.addEventListener('touchstart', unlockIOSAudio, { passive: true, once: true });
+    document.addEventListener('click', unlockIOSAudio, { passive: true, once: true });
+    updateIOSRotateOverlay();
+  }
+  function showScreen(name){
+    Object.entries(el.screens).forEach(([k,node]) => { if(node) node.classList.toggle('active', k === name); });
+    S.screen = name;
+    if(name === 'start' || name === 'story') playBGM(BGM_MAP.title);
+    else if(name === 'select') playBGM(BGM_MAP.select);
+    else if(name === 'ending') { stopBGM(); playBGM(BGM_MAP.ending); }
+    else if(name === 'arcadeEnding') { stopBGM(); playBGM(BGM_MAP.ending); }
+    else if(name === 'battle') { /* BGM is handled by startBattle() */ }
+    else if(name === 'vs') stopBGM();
+    updateIOSRotateOverlay();
+  }
+
+  // ========== SCREENS ==========
+  function rand(min,max){ return Math.random() * (max-min) + min; }
+  function randInt(min,max){ return Math.floor(rand(min,max+1)); }
+  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+
+  function textToast(msg){
+    el.battleToast.textContent = msg;
+    el.battleToast.classList.add('show');
+    S.toastTimer = 1.2;
+  }
+
+  function loadSprites(){
+    for(const ch of roster){
+      const src = spriteConfig[ch.id];
+      if(!src) continue;
+      const img = new Image();
+      img.src = src;
+      img.onload = () => S.sprites.set(ch.id, img);
+      img.onerror = () => {};
+    }
+  }
+
+  // ========== BATTLE (Fighter, hit, AI) ==========
+  class Fighter {
+    constructor(char, side){
+      this.char = char;
+      this.name = char.name;
+      this.side = side;
+      this.maxHp = char.hp;
+      this.hp = char.hp;
+      this.baseX = side === 'left' ? PLAYER_BASE_LEFT : ENEMY_BASE_RIGHT;
+      this.x = this.baseX;
+      this.y = 0;
+      this.vy = 0;
+      this.grounded = true;
+      this.width = 88;
+      this.height = 156;
+      this.state = 'idle';
+      this.stateTime = 0;
+      this.cooldown = 0;
+      this.guarding = false;
+      this.hitFlash = 0;
+      this.hurtTime = 0;
+      this.dead = false;
+      this.attackWindow = 0;
+      this.didHit = false;
+      this.face = side === 'left' ? 1 : -1;
+      this.hitBoxYScale = 1;
+    }
+    get attackScale(){ return this.char.atk / 100; }
+    get defenseScale(){ return this.char.def / 100; }
+    get speedScale(){ return this.char.spd / 100; }
+    startAction(action){
+      if(this.dead) return false;
+      if(this.cooldown > 0 && action !== 'guard') return false;
+      const airAttacks = ['punch_weak','punch_strong','kick_weak','kick_strong'];
+      if(!this.grounded && action !== 'guard' && !airAttacks.includes(action)) return false;
+      if(this.state === 'hurt') return false;
+      if(action !== 'crouch') this.hitBoxYScale = 1;
+
+      if(action === 'guard'){
+        this.state = 'guard'; this.stateTime = 0; this.cooldown = 0.2; this.guarding = true; return true;
+      }
+      const cfg = MOVE_CONFIG[action];
+      if(cfg){
+        this.state = action;
+        this.stateTime = 0;
+        this.cooldown = cfg.cooldown - (this.speedScale - 1) * (cfg.cooldown * 0.25);
+        this.attackWindow = cfg.attackWindow;
+        this.startupRemain = (cfg.startup || 0) * (1.08 - this.speedScale * 0.08);
+        this.didHit = false;
+        this.guarding = false;
+        return true;
+      }
+      if(action === 'special'){
+        const sc = MOVE_CONFIG.special;
+        this.state = 'special'; this.stateTime = 0; this.cooldown = sc.cooldown; this.attackWindow = sc.attackWindow; this.didHit = false; this.guarding = false; return true;
+      }
+      if(action === 'super' && this === S.player && S.superGauge >= 100){
+        const sc = MOVE_CONFIG.super;
+        S.superGauge = 0;
+        this.state = 'super'; this.stateTime = 0; this.cooldown = sc.cooldown; this.attackWindow = sc.attackWindow; this.didHit = false; this.guarding = false; return true;
+      }
+      if(action === 'jump'){
+        if(!this.grounded) return false;
+        this.state = 'jump'; this.stateTime = 0; this.cooldown = 0.72 - (this.speedScale-1)*0.1; this.vy = -525 * (0.95 + this.speedScale*0.08); this.grounded=false; this.guarding=false; return true;
+      }
+      if(action === 'crouch'){
+        if(!this.grounded) return false;
+        this.state = 'crouch'; this.stateTime = 0; this.guarding = true; this.hitBoxYScale = 0.6; return true;
+      }
+      if(action === 'throw'){
+        const opp = this === S.player ? S.enemy : S.player;
+        if(!opp || opp.dead) return false;
+        const dist = Math.abs(this.x - opp.x);
+        if(dist < 90 && !opp.guarding){
+          this.state = 'throw'; this.stateTime = 0; this.cooldown = 0.5;
+          const throwDmg = 14;
+          opp.takeHit(throwDmg);
+          opp.hurtTime = Math.max(opp.hurtTime, 0.35);
+          opp.baseX += this.face * 80;
+          opp.x = opp.baseX;
+          if(this === S.player){ S.stats.totalDamage += throwDmg; playSE('hit'); }
+          return true;
+        }
+        return false;
+      }
+      return false;
+    }
+    update(dt, opponent){
+      if(opponent && !this.dead) this.face = (opponent.x > this.x) ? 1 : -1;
+      this.stateTime += dt;
+      this.cooldown = Math.max(0, this.cooldown - dt);
+      this.hitFlash = Math.max(0, this.hitFlash - dt*4);
+      this.hurtTime = Math.max(0, this.hurtTime - dt);
+      if(this.attackWindow > 0) this.attackWindow -= dt;
+      if(this.startupRemain > 0) this.startupRemain -= dt;
+
+      if(!this.grounded){
+        this.vy += 1600 * dt;
+        this.y += this.vy * dt;
+        if(this.y >= 0){
+          this.y = 0; this.vy = 0; this.grounded = true;
+          if(this.state === 'jump') this.state = 'idle';
+        }
+      }
+
+      if(this.state === 'guard'){
+        if(this.stateTime > 0.4) { this.guarding = false; if(this.cooldown <= 0.08) this.state='idle'; }
+      }
+      const cfg = MOVE_CONFIG[this.state];
+      if(cfg){
+        if(this.stateTime > cfg.duration) this.state = 'idle';
+        const t = Math.min(1, this.stateTime / cfg.duration);
+        const targetOffset = cfg.lunge * Math.sin(t * Math.PI);
+        this.x = this.baseX + targetOffset * this.face;
+      } else {
+        this.x = this.baseX;
+      }
+      if(this.state === 'hurt' && this.hurtTime <= 0) this.state = 'idle';
+      if(this.state === 'idle' && this.cooldown <= 0) this.guarding = false;
+      if(this.state === 'crouch') this.x = this.baseX;
+      if(this.state === 'throw' && this.stateTime > 0.4){ this.state = 'idle'; }
+
+      if(this.attackWindow > 0 && (this.startupRemain || 0) <= 0 && !this.didHit && !opponent.dead && MOVE_CONFIG[this.state]){
+        const dx   = opponent.x - this.x;
+        const dist = Math.abs(dx);
+        const cfg  = MOVE_CONFIG[this.state];
+        const yDist = Math.abs(this.y - opponent.y);
+        // 向き判定: 攻撃者が相手の方を向いている場合のみヒット (-25px は背面密着クロスアップ許容)
+        const isFacing = (dx * this.face) > -25;
+        if(dist < cfg.hitRange && yDist < (cfg.hitRangeY ?? 70) && isFacing){
+          this.didHit = true;
+          resolveHit(this, opponent, this.state);
+        }
+      }
+
+      if(this.hp <= 0 && !this.dead){
+        this.hp = 0; this.dead = true; this.state = 'lose';
+      }
+    }
+    takeHit(dmg){
+      this.hp = clamp(this.hp - dmg, 0, this.maxHp);
+      this.state = 'hurt';
+      this.hurtTime = 0.22;
+      this.hitFlash = 1;
+    }
+  }
+
+  function resolveHit(attacker, defender, move){
+    let cfg = MOVE_CONFIG[move];
+    if(move === 'special'){
+      const charSpec = CHAR_SPECIAL_CONFIG[attacker.char.id];
+      if(charSpec) cfg = Object.assign({}, MOVE_CONFIG.special, charSpec);
+    }
+    const [lo, hi] = cfg ? cfg.damage : [8, 12];
+    const raw = randInt(lo, hi) * attacker.attackScale;
+    let damage = raw * (1.08 - (defender.defenseScale - 0.8) * 0.45);
+    if(defender.guarding) damage *= 0.42;
+    const isCounter = !defender.guarding && ATTACK_STATES.includes(defender.state) && defender.attackWindow > 0;
+    if(isCounter){ damage *= 1.25; if(attacker === S.player) textToast('COUNTER!'); }
+    damage *= getComboMultiplier();
+    damage = Math.max(1, Math.round(damage));
+
+    S.hitStopRemain = HIT_STOP_DURATION;
+    if(move === 'super'){ S.flashRemain = 0.15; S.slowMoRemain = 0.2; playSE('special'); }
+    else if(move === 'special' && attacker === S.player){
+      const charSpec = CHAR_SPECIAL_CONFIG[attacker.char.id];
+      if(charSpec) textToast(charSpec.name + '!');
+      playSE(defender.guarding ? 'guard' : 'hit');
+    } else playSE(defender.guarding ? 'guard' : 'hit');
+    if(attacker === S.player) S.superGauge = Math.min(100, (S.superGauge || 0) + SUPER_GAUGE_HIT);
+    if(defender === S.player) S.superGauge = Math.min(100, (S.superGauge || 0) + SUPER_GAUGE_TAKEN);
+
+    defender.takeHit(damage);
+    if(attacker === S.player){
+      if(move.indexOf('punch') >= 0) S.stats.punch += 1;
+      if(move.indexOf('kick') >= 0) S.stats.kick += 1;
+      S.playerCombo += 1;
+      S.comboTimer = 1.1;
+      S.stats.totalDamage += damage;
+      S.stats.maxCombo = Math.max(S.stats.maxCombo, S.playerCombo);
+      if(el.comboText) el.comboText.textContent = S.playerCombo >= 2 ? `COMBO x${S.playerCombo}` : '';
+      if(S.playerCombo >= 2) playSE('combo');
+      if(S.playerCombo >= 3) playSE('cheer');
+    }
+
+    S.shakeRemain = move === 'super' ? 0.22 : (move === 'kick_strong' || move === 'punch_strong') ? 0.13 : 0.06;
+    spawnDamage(defender, damage, defender.guarding);
+    spawnHitSparks(defender.x, defender.y, move);
+    if(S.playerCombo >= 2 && el.comboText){ el.comboText.classList.add('pop'); setTimeout(() => el.comboText.classList.remove('pop'), 200); }
+    const moveLabel = move.replace('_',' ').toUpperCase();
+    if(el.statusLine) el.statusLine.textContent = `${attacker.name} ${moveLabel} → ${damage} damage` + (defender.guarding ? ' (GUARD)' : '');
+  }
+
+  function spawnHitSparks(wx, wy, move){
+    const isHeavy = move === 'super' || move === 'kick_strong' || move === 'punch_strong';
+    const count   = move === 'super' ? 20 : isHeavy ? 13 : 7;
+    const colors  = move === 'super'
+      ? ['#fff','#FF7A1A','#FFB347','#E85D04','#FFD080']
+      : (move && move.indexOf('kick') >= 0)
+        ? ['#FF7A1A','#E85D04','#FFB347','#fff']
+        : ['#FFB347','#FF7A1A','#fff','#FFD080'];
+    const maxLife = move === 'super' ? 0.58 : isHeavy ? 0.44 : 0.28;
+    for(let i = 0; i < count; i++){
+      const angle = (Math.PI * 2 * i / count) + rand(-0.6, 0.6) - Math.PI * 0.5;
+      const speed = rand(60, isHeavy ? 230 : 160);
+      S.hitParticles.push({
+        x: wx + rand(-12, 12), y: wy + rand(-20, 8),
+        life: rand(maxLife * 0.55, maxLife), maxLife,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - rand(30, 90),
+        size: rand(isHeavy ? 3 : 2, isHeavy ? 7 : 5),
+        color: colors[Math.floor(rand(0, colors.length))]
+      });
+    }
+  }
+
+  function getComboMultiplier(){
+    if(S.playerCombo >= 4) return 1.3;
+    if(S.playerCombo === 3) return 1.2;
+    if(S.playerCombo === 2) return 1.1;
+    return 1.0;
+  }
+
+  function spawnDamage(target, dmg, guarded){
+    const arena = document.getElementById('arenaWrap') || el.battleScreen;
+    if(!arena) return;
+    const node = document.createElement('div');
+    node.className = 'floating-dmg';
+    node.textContent = guarded ? `-${dmg} BLOCK` : `-${dmg}`;
+    node.style.color = guarded ? '#8fe3ff' : '#ffe86d';
+    const aw = arena.offsetWidth  || window.innerWidth;
+    const ah = arena.offsetHeight || window.innerHeight;
+    const px = (target.x / ARENA_WIDTH) * aw;
+    const py = ah * 0.55 + rand(-24, 18);
+    node.style.left = `${px}px`;
+    node.style.top  = `${py}px`;
+    arena.appendChild(node);
+    let t = 0;
+    function anim(){
+      t += 0.016;
+      node.style.transform = `translateY(${-46*t}px) scale(${1 + 0.08*Math.sin(t*8)})`;
+      node.style.opacity = String(1 - t/0.95);
+      if(t < 0.95) requestAnimationFrame(anim); else node.remove();
+    }
+    requestAnimationFrame(anim);
+  }
+
+  function hapticLight(){
+    try { if(navigator.vibrate) navigator.vibrate(15); } catch(_){}
+  }
+
+  // ========== AUDIO ==========
+  function playSE(type){
+    if(['hit','punch','kick','guard','combo','special','down','cheer','win'].includes(type)) hapticLight();
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(!AC) return;
+      if(!playSE.ac) playSE.ac = new AC();
+      const ac = playSE.ac;
+      if(ac.state === 'suspended') ac.resume();
+
+      const now = ac.currentTime;
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.connect(gain); gain.connect(ac.destination);
+      gain.gain.setValueAtTime(0.0001, now);
+
+      const presets = {
+        punch:[160, 95, 0.08, 'square'],
+        kick:[220, 120, 0.12, 'sawtooth'],
+        hit:[85, 60, 0.10, 'triangle'],
+        combo:[420, 520, 0.16, 'square'],
+        guard:[320, 100, 0.06, 'square'],
+        special:[400, 900, 0.2, 'sawtooth'],
+        down:[55, 35, 0.28, 'sine'],
+        cheer:[280, 380, 0.15, 'square'],
+        win:[523, 659, 0.32, 'sine']
+      };
+      const [f1,f2,dur,wave] = presets[type] || presets.hit;
+      osc.type = wave;
+      osc.frequency.setValueAtTime(f1, now);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(40, f2), now + dur);
+      gain.gain.exponentialRampToValueAtTime(0.12 * (S.seVolume || 1), now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      osc.start(now); osc.stop(now + dur + 0.02);
+    }catch(err){}
+  }
+
+  // ========== SCREENS (select, story, battle init/end) ==========
+  function updateSelPanel(side, ch){
+    const portrait = document.getElementById(`selPortrait${side}`);
+    const nameEl   = document.getElementById(`selName${side}`);
+    const typeEl   = document.getElementById(`selType${side}`);
+    const statsEl  = document.getElementById(`selStats${side}`);
+    const flavorEl = document.getElementById(`selFlavor${side}`);
+    if(!portrait) return;
+    const spriteSrc = spriteConfig[ch.id];
+    const [r, c] = ch.portraitCell || [0, 0];
+    const bx = (SPRITE_COLS > 1) ? (c * 100 / (SPRITE_COLS - 1)) : 0;
+    const by = (SPRITE_ROWS > 1) ? (r * 100 / (SPRITE_ROWS - 1)) : 0;
+    if(spriteSrc){
+      portrait.style.backgroundImage = `url(${spriteSrc})`;
+      portrait.style.backgroundSize  = `${SPRITE_COLS * 100}% ${SPRITE_ROWS * 100}%`;
+      portrait.style.backgroundPosition = `${bx}% ${by}%`;
+      portrait.style.backgroundColor = 'transparent';
+    } else {
+      portrait.style.backgroundImage = `linear-gradient(135deg,${ch.c1},${ch.c2})`;
+      portrait.style.backgroundSize  = '100% 100%';
+    }
+    portrait.style.borderColor = ch.c1;
+    portrait.style.boxShadow   = `0 8px 32px rgba(0,0,0,.6), 0 0 18px ${ch.c1}44`;
+    if(nameEl)   nameEl.textContent   = ch.name;
+    if(typeEl)   typeEl.textContent   = TYPE_LABELS[ch.type] || 'バランス型';
+    if(flavorEl) flavorEl.textContent = ch.flavor || '';
+    if(statsEl){
+      const statColors = { ATK:'#FF7A1A', DEF:'#5ac8c8', SPD:'#FFB347', HP:'#40C870' };
+      statsEl.innerHTML = [['ATK',ch.atk],['DEF',ch.def],['SPD',ch.spd],['HP',Math.round(ch.hp*0.9)]].map(([k,v]) => {
+        const pct = Math.min(100, Math.round(v / 1.2));
+        return `<div class="sel-stat-row"><span style="width:24px">${k}</span><div class="sel-stat-track"><div class="sel-stat-fill" style="width:${pct}%;background:${statColors[k]}"></div></div><span style="width:22px;color:#fff;text-align:right">${v}</span></div>`;
+      }).join('');
+    }
+  }
+
+  function renderSelect(){
+    const selected  = roster.find(r => r.id === S.selectedId)   || roster[0];
+    let   enemySel  = roster.find(r => r.id === S.enemyChoiceId) || roster.find(r => r.id !== selected.id) || roster[1];
+    if(enemySel.id === selected.id) { enemySel = roster.find(r => r.id !== selected.id) || roster[1]; S.enemyChoiceId = enemySel.id; }
+
+    // dynamic background
+    const selBg = document.getElementById('selBg');
+    if(selBg) selBg.style.background = `radial-gradient(ellipse at 18% 50%,${selected.c1}28 0%,transparent 52%), radial-gradient(ellipse at 82% 50%,${enemySel.c2}20 0%,transparent 52%)`;
+
+    updateSelPanel('L', selected);
+    updateSelPanel('R', enemySel);
+
+    // Main character grid
+    el.charGrid.innerHTML = '';
+    roster.forEach(ch => {
+      const div = document.createElement('div');
+      const isP1  = S.selectedId    === ch.id;
+      const isCPU = S.enemyChoiceId === ch.id;
+      div.className = 'sel-card' + (isP1 ? ' selected' : '') + (isCPU ? ' cpu-selected' : '');
+      const spriteSrc = spriteConfig[ch.id];
+      const [r, c] = ch.portraitCell || [0, 0];
+      const bx = (SPRITE_COLS > 1) ? (c * 100 / (SPRITE_COLS - 1)) : 0;
+      const by = (SPRITE_ROWS > 1) ? (r * 100 / (SPRITE_ROWS - 1)) : 0;
+      const pStyle = spriteSrc
+        ? `background:url(${spriteSrc}) ${bx}% ${by}% / ${SPRITE_COLS * 100}% ${SPRITE_ROWS * 100}% no-repeat;`
+        : `background:linear-gradient(135deg,${ch.c1},${ch.c2});`;
+      div.innerHTML = `<div class="sel-card-portrait" style="${pStyle}"></div><div class="sel-card-name">${ch.name}</div>`;
+      div.addEventListener('click', () => {
+        S.selectedId = ch.id;
+        if(S.enemyChoiceId === ch.id){ const o = roster.find(r2 => r2.id !== ch.id); if(o) S.enemyChoiceId = o.id; }
+        renderSelect();
+      });
+      el.charGrid.appendChild(div);
+    });
+
+    // CPU opponent mini-grid
+    const oppGrid = document.getElementById('opponentGrid');
+    if(oppGrid){
+      oppGrid.innerHTML = '';
+      roster.forEach(ch => {
+        const btn = document.createElement('div');
+        btn.className = 'sel-opp-btn' + (S.enemyChoiceId === ch.id ? ' cpu-sel' : '');
+        const spriteSrc = spriteConfig[ch.id];
+        const [r, c] = ch.portraitCell || [0, 0];
+        const bx = (SPRITE_COLS > 1) ? (c * 100 / (SPRITE_COLS - 1)) : 0;
+        const by = (SPRITE_ROWS > 1) ? (r * 100 / (SPRITE_ROWS - 1)) : 0;
+        if(spriteSrc){ btn.style.backgroundImage=`url(${spriteSrc})`; btn.style.backgroundSize=`${SPRITE_COLS*100}% ${SPRITE_ROWS*100}%`; btn.style.backgroundPosition=`${bx}% ${by}%`; }
+        else { btn.style.background=`linear-gradient(135deg,${ch.c1},${ch.c2})`; }
+        btn.title = ch.name;
+        btn.addEventListener('click', () => {
+          S.enemyChoiceId = ch.id;
+          if(S.selectedId === ch.id){ const o = roster.find(r2 => r2.id !== ch.id); if(o) S.selectedId = o.id; }
+          renderSelect();
+        });
+        oppGrid.appendChild(btn);
+      });
+    }
+  }
+
+  function startStory(){
+    S.storyIndex = 0;
+    el.storyText.textContent = storyPages[S.storyIndex];
+    if(el.storyPage) el.storyPage.textContent = `1 / ${storyPages.length}`;
+    showScreen('story');
+  }
+
+  function startArcadeMode(){
+    const playerChar = roster.find(r => r.id === S.selectedId) || roster[0];
+    const opponents = roster.filter(r => r.id !== playerChar.id).map(r => r.id);
+    // Shuffle opponents
+    for(let i = opponents.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [opponents[i], opponents[j]] = [opponents[j], opponents[i]];
+    }
+    S.arcadeMode = true;
+    S.arcadeOpponents = opponents;
+    S.arcadeIndex = 0;
+    showCharIntro();
+  }
+
+  function showCharIntro(){
+    const playerChar = roster.find(r => r.id === S.selectedId) || roster[0];
+    const story = charStories[playerChar.id];
+    // Set portrait
+    if(el.storyPortrait){
+      const src = spriteConfig[playerChar.id];
+      if(src){
+        el.storyPortrait.style.backgroundImage = `url(${src})`;
+        el.storyPortrait.style.backgroundSize = `${SPRITE_COLS*100}% ${SPRITE_ROWS*100}%`;
+        el.storyPortrait.style.backgroundPosition = '0% 0%';
+        el.storyPortrait.style.backgroundColor = playerChar.c2;
+      } else {
+        el.storyPortrait.style.background = `linear-gradient(135deg,${playerChar.c1},${playerChar.c2})`;
+      }
+      el.storyPortrait.classList.add('visible');
+    }
+    if(el.storyCharName){
+      el.storyCharName.textContent = playerChar.name.toUpperCase();
+      el.storyCharName.classList.add('visible');
+    }
+    el.storyText.textContent = story ? story.intro : '';
+    if(el.storyPage) el.storyPage.textContent = '';
+    el.storyNextBtn.textContent = 'FIGHT!';
+    if(el.arcadeProgress){
+      el.arcadeProgress.textContent = `${S.arcadeOpponents.length}人の戦士が待つ`;
+      el.arcadeProgress.style.display = 'block';
+    }
+    S.storyMode = 'charIntro';
+    showScreen('story');
+  }
+
+  function showArcadeEnding(){
+    const playerChar = roster.find(r => r.id === S.selectedId) || roster[0];
+    const story = charStories[playerChar.id];
+    if(el.arcadeEndPortrait){
+      const src = spriteConfig[playerChar.id];
+      if(src){
+        el.arcadeEndPortrait.style.backgroundImage = `url(${src})`;
+        el.arcadeEndPortrait.style.backgroundSize = `${SPRITE_COLS*100}% ${SPRITE_ROWS*100}%`;
+        el.arcadeEndPortrait.style.backgroundPosition = '0% 0%';
+        el.arcadeEndPortrait.style.backgroundColor = playerChar.c2;
+      } else {
+        el.arcadeEndPortrait.style.background = `linear-gradient(135deg,${playerChar.c1},${playerChar.c2})`;
+      }
+    }
+    if(el.arcadeEndCharName) el.arcadeEndCharName.textContent = playerChar.name.toUpperCase();
+    if(el.arcadeEndBody) el.arcadeEndBody.textContent = story ? story.ending : '';
+    S.arcadeMode = false;
+    S.arcadeOpponents = [];
+    S.arcadeIndex = 0;
+    showScreen('arcadeEnding');
+  }
+
+  function storyNext(){
+    if(S.storyMode === 'charIntro'){
+      // Reset story screen to generic state
+      if(el.storyPortrait) el.storyPortrait.classList.remove('visible');
+      if(el.storyCharName) el.storyCharName.classList.remove('visible');
+      if(el.arcadeProgress) el.arcadeProgress.style.display = 'none';
+      el.storyNextBtn.textContent = 'NEXT';
+      S.storyMode = 'generic';
+      S.enemyChoiceId = S.arcadeOpponents[0];
+      S.arcadeIndex = 0;
+      goToVs();
+      return;
+    }
+    S.storyIndex++;
+    if(S.storyIndex >= storyPages.length){
+      renderSelect();
+      showScreen('select');
+      return;
+    }
+    el.storyText.textContent = storyPages[S.storyIndex];
+    if(el.storyPage) el.storyPage.textContent = `${S.storyIndex + 1} / ${storyPages.length}`;
+  }
+
+  function goToVs(){
+    const playerChar = roster.find(r => r.id === S.selectedId) || roster[0];
+    let enemyChar = roster.find(r => r.id === S.enemyChoiceId);
+    if(!enemyChar || enemyChar.id === playerChar.id) enemyChar = roster.find(r => r.id !== playerChar.id) || roster[1];
+    S.enemyChoiceId = enemyChar.id;
+    S.playerWins = 0;
+    S.enemyWins = 0;
+    function setVsPortrait(elNode, ch){
+      if(!elNode) return;
+      const src = spriteConfig[ch.id];
+      const [r, c] = ch.portraitCell || [0,0];
+      const px = (SPRITE_COLS > 1) ? (c * 100 / (SPRITE_COLS - 1)) : 0;
+      const py = (SPRITE_ROWS > 1) ? (r * 100 / (SPRITE_ROWS - 1)) : 0;
+      if(src){ elNode.style.background = `url(${src}) ${px}% ${py}% / ${SPRITE_COLS * 100}% ${SPRITE_ROWS * 100}% no-repeat`; elNode.style.backgroundColor = 'var(--panel)'; }
+      else { elNode.style.background = `linear-gradient(135deg, ${ch.c1}, ${ch.c2})`; }
+    }
+    setVsPortrait(el.vsPlayerPortrait, playerChar);
+    setVsPortrait(el.vsEnemyPortrait, enemyChar);
+    if(el.vsCountdown) el.vsCountdown.textContent = '';
+    showScreen('vs');
+    const vsSteps = [{ t:500, text:'3' }, { t:1000, text:'2' }, { t:1500, text:'1' }, { t:2000, text:'FIGHT!' }];
+    vsSteps.forEach(({ t, text }) => { setTimeout(() => { if(el.vsCountdown) el.vsCountdown.textContent = text; }, t); });
+    setTimeout(initBattle, 2600);
+  }
+
+  function initBattle(){
+    const playerChar = roster.find(r => r.id === S.selectedId) || roster[0];
+    const enemyChar = roster.find(r => r.id === S.enemyChoiceId) || roster[0];
+    S.playerChar = playerChar;
+    S.enemyChar = enemyChar;
+    S.player = new Fighter(playerChar, 'left');
+    S.enemy = new Fighter(enemyChar, 'right');
+    S.round = 1;
+    S.playerCombo = 0;
+    S.comboTimer = 0;
+    S.gameOver = false;
+    S.lastTs = 0;
+    S.aiTimer = rand(.45,.9);
+    S.stats = { totalDamage:0, maxCombo:0, punch:0, kick:0, guard:0 };
+    S.stickX = 0; S.stickY = 0; S.stickPrevUp = false;
+    S.battleTime = 99;
+    S.superGauge = 0;
+    S.roundFightPhase = 'round';
+    S.roundFightTimer = 0;
+    S.koShown = false;
+    S.koShowTimer = 0;
+    S.koHandled = false;
+    S.hitParticles = [];
+    S.shakeRemain = 0;
+    S.edgeWarnTriggered = false;
+    S.paused = false;
+    if(el.pauseOverlay) el.pauseOverlay.classList.remove('show');
+    const battleBGM = BGM_THEME[enemyChar.id] || BGM_MAP.battle;
+    playBGM(battleBGM);
+    if(el.joystickStick) el.joystickStick.style.transform = 'translate(0,0)';
+    el.playerHudName.textContent = playerChar.name;
+    el.enemyHudName.textContent = enemyChar.name;
+    el.roundText.textContent = 'ROUND 1';
+    el.comboText.textContent = '';
+    el.statusLine.textContent = 'Fight!';
+    el.playerHpFill.style.width = '100%';
+    el.enemyHpFill.style.width = '100%';
+    el.playerHpFill.classList.remove('low-hp');
+    el.enemyHpFill.classList.remove('low-hp');
+    if(el.timerDisplay){ el.timerDisplay.textContent = '99'; el.timerDisplay.classList.remove('warn'); }
+    if(el.roundFightText){ el.roundFightText.textContent = `ROUND ${S.round}`; el.roundFightText.className = 'big-text show'; }
+    if(el.scoreDisplay) el.scoreDisplay.textContent = `${S.playerWins} - ${S.enemyWins}`;
+    if(el.playerSuperFill) el.playerSuperFill.style.width = '0%';
+    if(el.superBtn) el.superBtn.disabled = true;
+    if(el.roundFightOverlay) el.roundFightOverlay.style.display = 'flex';
+    if(el.koOverlay) { el.koOverlay.classList.remove('show'); el.koOverlay.style.display = 'none'; }
+    showScreen('battle');
+    resizeCanvas();
+    cancelAnimationFrame(animationId);
+    ctx.clearRect(0, 0, el.canvas.width / DPR, el.canvas.height / DPR);
+    animationId = requestAnimationFrame(loop);
+  }
+
+  function nextRound(){
+    S.round++;
+    S.player = new Fighter(S.playerChar, 'left');
+    S.enemy = new Fighter(S.enemyChar, 'right');
+    S.gameOver = false;
+    S.koShown = false;
+    S.koShowTimer = 0;
+    S.koHandled = false;
+    S.battleTime = 99;
+    S.superGauge = 0;
+    S.roundFightPhase = 'round';
+    S.roundFightTimer = 0;
+    S.hitParticles = [];
+    S.edgeWarnTriggered = false;
+    S.flashRemain = 0;
+    S.slowMoRemain = 0;
+    S.shakeRemain = 0;
+    S.paused = false;
+    if(el.pauseOverlay) el.pauseOverlay.classList.remove('show');
+    el.playerHpFill.style.width = '100%';
+    el.enemyHpFill.style.width = '100%';
+    el.playerHpFill.classList.remove('low-hp','critical');
+    el.enemyHpFill.classList.remove('low-hp','critical');
+    if(el.timerDisplay){ el.timerDisplay.textContent = '99'; el.timerDisplay.classList.remove('warn'); }
+    if(el.roundFightText){ el.roundFightText.textContent = `ROUND ${S.round}`; el.roundFightText.className = 'big-text show'; }
+    if(el.roundFightOverlay) el.roundFightOverlay.style.display = 'flex';
+    if(el.koOverlay) { el.koOverlay.classList.remove('show'); el.koOverlay.style.display = 'none'; }
+    if(el.scoreDisplay) el.scoreDisplay.textContent = `${S.playerWins} - ${S.enemyWins}`;
+    if(el.playerSuperFill) el.playerSuperFill.style.width = '0%';
+    if(el.superBtn) el.superBtn.disabled = true;
+  }
+
+  function endBattle(win){
+    S.gameOver = true;
+    S.paused = false;
+    if(el.pauseOverlay) el.pauseOverlay.classList.remove('show');
+    cancelAnimationFrame(animationId);
+    playSE('win');
+    if(el.victoryBadge){
+      el.victoryBadge.style.display = 'none';
+      if(win && S.player && S.player.maxHp > 0){
+        const ratio = S.player.hp / S.player.maxHp;
+        if(ratio >= 1) { el.victoryBadge.textContent = 'PERFECT!'; el.victoryBadge.className = 'victory-badge perfect'; el.victoryBadge.style.display = 'block'; }
+        else if(ratio >= 0.8) { el.victoryBadge.textContent = 'GREAT!'; el.victoryBadge.className = 'victory-badge great'; el.victoryBadge.style.display = 'block'; }
+      }
+    }
+    el.sumDamage.textContent = `総ダメージ: ${Math.round(S.stats.totalDamage)}`;
+    el.sumCombo.textContent = `最大コンボ: ${S.stats.maxCombo}`;
+    el.sumPunch.textContent = `パンチ回数: ${S.stats.punch} / キック回数: ${S.stats.kick}`;
+    el.sumGuard.textContent = `ガード回数: ${S.stats.guard}`;
+
+    if(S.arcadeMode && win){
+      S.arcadeIndex++;
+      const remaining = S.arcadeOpponents.length - S.arcadeIndex;
+      if(remaining <= 0){
+        if(el.resultTitle){ el.resultTitle.textContent = 'ALL CLEAR!!'; el.resultTitle.style.color = '#FF7A1A'; }
+        if(el.resultSub) el.resultSub.textContent = `全ての戦士を倒した！`;
+        if(el.victoryQuote) el.victoryQuote.textContent = S.player.char.winQuote || '';
+        if(el.playAgainBtn) el.playAgainBtn.style.display = 'none';
+        showScreen('ending');
+        setTimeout(() => showArcadeEnding(), 3500);
+        return;
+      } else {
+        const nextChar = roster.find(r => r.id === S.arcadeOpponents[S.arcadeIndex]);
+        if(el.resultTitle){ el.resultTitle.textContent = 'WIN!'; el.resultTitle.style.color = '#2dba4e'; }
+        if(el.resultSub) el.resultSub.textContent = `NEXT: ${nextChar ? nextChar.name : '???'}  (残り ${remaining}人)`;
+        if(el.victoryQuote) el.victoryQuote.textContent = S.player.char.winQuote || '';
+        if(el.playAgainBtn) el.playAgainBtn.style.display = 'none';
+        showScreen('ending');
+        setTimeout(() => {
+          S.enemyChoiceId = S.arcadeOpponents[S.arcadeIndex];
+          S.playerWins = 0;
+          S.enemyWins = 0;
+          goToVs();
+        }, 3000);
+        return;
+      }
+    }
+    if(S.arcadeMode && !win){
+      S.arcadeMode = false;
+      S.arcadeOpponents = [];
+      S.arcadeIndex = 0;
+      if(el.resultTitle){ el.resultTitle.textContent = 'GAME OVER'; }
+      el.resultTitle.style.color = '#e63946';
+      if(el.resultSub) el.resultSub.textContent = `${S.enemy.name}に敗れた。また挑戦しよう。`;
+      if(el.victoryQuote) el.victoryQuote.textContent = S.enemy.char.winQuote || '';
+      if(el.playAgainBtn) el.playAgainBtn.style.display = '';
+      showScreen('ending');
+      return;
+    }
+    if(el.playAgainBtn) el.playAgainBtn.style.display = '';
+    if(el.resultTitle) el.resultTitle.textContent = win ? `YOU WIN ${S.playerWins}-${S.enemyWins}` : `YOU LOSE ${S.playerWins}-${S.enemyWins}`;
+    el.resultTitle.style.color = win ? '#2dba4e' : '#e63946';
+    el.resultSub.textContent = `${S.player.name} ${win ? 'defeated' : 'was defeated by'} ${S.enemy.name}`;
+    const winner = win ? S.player : S.enemy;
+    if(el.victoryQuote) el.victoryQuote.textContent = winner.char.winQuote || '';
+    showScreen('ending');
+  }
+
+  function enemyAI(dt){
+    if(S.gameOver) return;
+    const p = S.player;
+    const e = S.enemy;
+    const dist = Math.abs(e.x - p.x);
+    const far = dist > 200;
+    const close = dist < 120;
+    const hpLead = (e.hp / e.maxHp) - (p.hp / p.maxHp) > 0.25;
+    const diff = S.difficulty || 'normal';
+    const easy = diff === 'easy', hard = diff === 'hard';
+    const reactMul = easy ? 1.6 : hard ? 0.55 : 1;
+    const aggMul = easy ? 0.6 : hard ? 1.4 : 1;
+
+    if(far && e.grounded && e.state === 'idle'){
+      e.baseX = Math.max(ENEMY_MIN_X, e.baseX - (380 * (easy ? 0.7 : hard ? 1.2 : 1)) * dt);
+      e.x = e.baseX;
+      S.aiTimer = rand(0.12, 0.28) * reactMul;
+      return;
+    }
+    S.aiTimer -= dt;
+    if(S.aiTimer > 0) return;
+
+    const lowHp = e.hp / e.maxHp < 0.33;
+    const playerAggro = ATTACK_STATES.includes(p.state);
+    const veryClose = dist < 90;
+    const roll = Math.random();
+    const guardChance = easy ? 0.5 : hard ? 0.2 : 0.35;
+    const throwChance = easy ? 0.05 : hard ? 0.2 : 0.12;
+    const specialChance = easy ? 0.02 : hard ? 0.15 : 0.08;
+
+    // 硬直狩り：プレイヤーが技後の硬直中かつ近距離なら強攻撃で確定反撃
+    const playerInRecovery = ATTACK_STATES.includes(p.state) && p.cooldown > 0.22;
+    if(playerInRecovery && close && roll < (0.72 * aggMul)){
+      e.startAction(['punch_strong','kick_strong'][randInt(0,1)]);
+      S.aiTimer = rand(0.1, 0.22) * reactMul;
+      return;
+    }
+
+    let action = 'punch_weak';
+    if(veryClose && !p.guarding && roll < throwChance) action = 'throw';
+    else if(lowHp && roll < 0.08) action = 'crouch';
+    else if(lowHp && roll < guardChance) action = 'guard';
+    else if(playerAggro && roll < (0.18 * aggMul)) action = 'jump';
+    else if(close && roll < (0.5 * aggMul)) action = ['punch_weak','punch_strong','kick_weak','kick_strong'][randInt(0,3)];
+    else if(!close && roll < specialChance) action = 'special';
+    else if(roll < 0.5) action = ['punch_weak','punch_strong'][randInt(0,1)];
+    else if(roll < 0.8) action = ['kick_weak','kick_strong'][randInt(0,1)];
+    else action = hpLead ? ['punch_weak','kick_weak'][randInt(0,1)] : 'guard';
+
+    e.startAction(action);
+    S.aiTimer = rand(0.26, 0.58) * (1.08 - e.speedScale*0.12) * reactMul;
+  }
+
+  // ========== INPUT ==========
+  function handlePlayerAction(action){
+    if(S.screen !== 'battle' || S.gameOver || !S.player) return;
+    if(['punch_weak','punch_strong','kick_weak','kick_strong'].includes(action) && checkSpecialInput()) action = 'special';
+    const ok = S.player.startAction(action);
+    if(!ok) return;
+    if(action === 'guard') S.stats.guard += 1;
+    if(action.indexOf('punch') >= 0) playSE('punch');
+    if(action.indexOf('kick') >= 0) playSE('kick');
+    if(action === 'super'){ playSE('special'); textToast('SUPER!'); }
+    if(action === 'throw') textToast('THROW!');
+    if(action === 'jump') textToast('JUMP');
+    if(action === 'guard') textToast('GUARD');
+  }
+
+  function update(dt){
+    if(S.hitStopRemain > 0){ S.hitStopRemain -= dt; dt = 0; }
+    if(S.flashRemain > 0) S.flashRemain -= dt;
+    let effectiveDt = dt;
+    if(S.slowMoRemain > 0){ effectiveDt = dt * 0.3; S.slowMoRemain -= dt; }
+
+    if(S.roundFightPhase === 'round'){
+      S.roundFightTimer = (S.roundFightTimer || 0) + effectiveDt;
+      if(S.roundFightTimer >= 1.5 && el.roundFightText){
+        el.roundFightText.textContent = 'FIGHT!';
+        el.roundFightText.className = 'big-text show fight';
+      }
+      if(S.roundFightTimer >= 2.3 && el.roundFightOverlay){
+        el.roundFightOverlay.style.display = 'none';
+        S.roundFightPhase = 'done';
+      }
+    }
+    if(S.roundFightPhase !== 'done'){ if(S.player) S.player.update(effectiveDt, S.enemy); if(S.enemy) S.enemy.update(effectiveDt, S.player); return; }
+
+    if(S.toastTimer > 0){
+      S.toastTimer -= effectiveDt;
+      if(S.toastTimer <= 0) el.battleToast.classList.remove('show');
+    }
+    if(S.comboTimer > 0){
+      S.comboTimer -= effectiveDt;
+      if(S.comboTimer <= 0){
+        S.playerCombo = 0;
+        if(el.comboText) el.comboText.textContent = '';
+      }
+    }
+
+    if(S.battleTime > 0 && !S.gameOver){
+      S.battleTime -= effectiveDt;
+      const sec = Math.max(0, Math.ceil(S.battleTime));
+      if(el.timerDisplay) el.timerDisplay.textContent = String(sec);
+      if(sec <= 10 && el.timerDisplay) el.timerDisplay.classList.add('warn');
+      if(sec <= 0){ S.battleTime = 0; const pw = S.player.hp / S.player.maxHp; const ew = S.enemy.hp / S.enemy.maxHp; endBattle(ew < pw); return; }
+    }
+
+    const pl = S.player;
+    const stickBack = S.stickX < -STICK_THRESHOLD_BACK;
+    const stickForward = S.stickX > STICK_THRESHOLD_FORWARD;
+    const stickUp = S.stickY > STICK_THRESHOLD_UP;
+    const stickDown = S.stickY < -STICK_THRESHOLD_DOWN;
+
+    if(pl && !pl.dead && pl.side === 'left'){
+      if(pl.state === 'crouch' && !stickDown){ pl.state = 'idle'; pl.hitBoxYScale = 1; pl.guarding = false; }
+      else if(stickBack && (pl.state === 'idle' || pl.state === 'guard')){
+        if(pl.state === 'idle') S.stats.guard++;
+        pl.startAction('guard');
+        pl.baseX = clamp(pl.baseX - WALK_SPEED * 0.75 * effectiveDt, PLAYER_BASE_LEFT, PLAYER_MAX_X);
+      } else if(stickDown && pl.state === 'idle' && pl.grounded) pl.startAction('crouch');
+      else if(stickForward && pl.state === 'idle' && pl.grounded){
+        pl.baseX = clamp(pl.baseX + WALK_SPEED * effectiveDt, PLAYER_BASE_LEFT, PLAYER_MAX_X);
+        pl.x = pl.baseX;
+      }
+    }
+    if(stickUp && !S.stickPrevUp && pl && !pl.dead && pl.grounded) pl.startAction('jump');
+    S.stickPrevUp = stickUp;
+
+    enemyAI(effectiveDt);
+    S.player.update(effectiveDt, S.enemy);
+    S.enemy.update(effectiveDt, S.player);
+
+    if(pl && S.enemy && !pl.dead && !S.enemy.dead){
+      if(pl.baseX > S.enemy.baseX - CROSSOVER_MIN_DIST){ pl.baseX = S.enemy.baseX - CROSSOVER_MIN_DIST; pl.x = pl.baseX; }
+      if(S.enemy.baseX < pl.baseX + CROSSOVER_MIN_DIST){ S.enemy.baseX = pl.baseX + CROSSOVER_MIN_DIST; S.enemy.x = S.enemy.baseX; }
+    }
+
+    if(!S.gameOver && (S.player.dead || S.enemy.dead)){
+      if(!S.koShown){ S.koShown = true; playSE('down'); if(el.koOverlay) { el.koOverlay.style.display = 'flex'; el.koOverlay.classList.add('show'); } }
+      S.koShowTimer = (S.koShowTimer || 0) + effectiveDt;
+      if(S.koShowTimer >= 1.8 && !S.koHandled){
+        S.koHandled = true;
+        if(S.enemy.dead) S.playerWins++; else S.enemyWins++;
+        if(S.playerWins >= 2 || S.enemyWins >= 2) endBattle(S.playerWins >= 2);
+        else nextRound();
+      }
+      if(S.player) S.player.update(effectiveDt, S.enemy);
+      if(S.enemy) S.enemy.update(effectiveDt, S.player);
+      el.playerHpFill.style.width = `${(S.player.hp / S.player.maxHp) * 100}%`;
+      el.enemyHpFill.style.width = `${(S.enemy.hp / S.enemy.maxHp) * 100}%`;
+      if(S.player.hp / S.player.maxHp < 0.3){ el.playerHpFill.classList.add('low-hp','critical'); } else { el.playerHpFill.classList.remove('low-hp','critical'); }
+      if(S.enemy.hp / S.enemy.maxHp < 0.3){ el.enemyHpFill.classList.add('low-hp','critical'); } else { el.enemyHpFill.classList.remove('low-hp','critical'); }
+      return;
+    }
+
+    el.playerHpFill.style.width = `${(S.player.hp / S.player.maxHp) * 100}%`;
+    el.enemyHpFill.style.width = `${(S.enemy.hp / S.enemy.maxHp) * 100}%`;
+    const plHp = S.player.hp / S.player.maxHp;
+    const enHp = S.enemy.hp / S.enemy.maxHp;
+    if(plHp < 0.3){ el.playerHpFill.classList.add('low-hp','critical'); if(plHp < 0.3 && !S.edgeWarnTriggered){ S.edgeWarnTriggered = true; if(el.screenEdgeWarn){ el.screenEdgeWarn.style.animation = 'none'; el.screenEdgeWarn.offsetHeight; el.screenEdgeWarn.style.animation = 'edge-flash .6s ease'; } } }
+    else{ el.playerHpFill.classList.remove('low-hp','critical'); if(plHp > 0.35) S.edgeWarnTriggered = false; }
+    if(enHp < 0.3) el.enemyHpFill.classList.add('low-hp','critical'); else el.enemyHpFill.classList.remove('low-hp','critical');
+    if(el.playerSuperFill) el.playerSuperFill.style.width = (S.superGauge || 0) + '%';
+    if(el.superBtn) el.superBtn.disabled = (S.superGauge || 0) < 100;
+  }
+
+  // STAGES は stages.js で定義 (外部ファイル)
+
+  function drawBackground(w,h){
+    const fY = h * 0.74;
+    const t  = performance.now() / 1000;
+    const eid = S.enemy?.char?.id;
+    const stageFn = STAGES[eid];
+    if(stageFn){ stageFn(ctx,w,h,fY,t); return; }
+    // デフォルト背景 (フォールバック)
+    const g = ctx.createLinearGradient(0,0,0,fY);
+    g.addColorStop(0,'#87CEEB');g.addColorStop(.5,'#6bb6e8');g.addColorStop(1,'#4a9fd4');
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,fY);
+    ctx.fillStyle='#8B7355';ctx.fillRect(0,fY,w,h-fY);
+    for(let i=0;i<20;i++){ctx.fillStyle=i%2?'#7a6348':'#9c8468';ctx.fillRect((i*w/20)%w,fY+(i*8)%24,w/20+2,12);}
+  }
+
+  function drawFighter(f, opponent, w, h){
+    const floorY = h*0.74;
+    const px = (f.x / ARENA_WIDTH) * w;
+    const py = floorY + f.y;
+    const bob = f.state === 'idle' ? Math.sin(performance.now()*0.006 + (f.side==='left'?0:1)) * 3 : 0;
+    const hitScale = f.hitFlash > 0 ? 1 + f.hitFlash*0.04 : 1;
+
+    ctx.save();
+    ctx.translate(px, py + bob);
+    ctx.scale(f.face, 1);
+
+    // shadow (120% scale)
+    ctx.save();
+    ctx.scale(f.face,1);
+    ctx.fillStyle = 'rgba(0,0,0,.28)';
+    ctx.beginPath(); ctx.ellipse(0, 8, 50, 14, 0, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    const img = S.sprites.get(f.char.id);
+    if(img && img.complete && img.naturalWidth > 0){
+      // 5x5 スプライトシート: 行0=idle, 行1=walk/run, 行2=攻撃, 行3=ガード/被弾, 行4=jump/倒地
+      const cols = 5, rows = 5;
+      const frameW = img.width / cols;
+      const frameH = img.height / rows;
+      const rowMap = { idle:0, punch_weak:2, punch_strong:2, kick_weak:2, kick_strong:2, special:2, super:2, jump:4, guard:3, crouch:3, throw:2, hurt:3, lose:4 };
+      const row = rowMap[f.state] ?? 0;
+      const speed = f.state === 'idle' ? 0.14 : ATTACK_STATES.includes(f.state) ? 0.06 : 0.1;
+      const frame = Math.min(Math.floor(f.stateTime / speed), cols - 1);
+      const col = f.state === 'lose' ? 4 : frame % cols;
+      const BASE_W = 154, BASE_H = 192;
+      ctx.drawImage(img, col*frameW, row*frameH, frameW, frameH, -(BASE_W/2), -BASE_H, BASE_W*hitScale, BASE_H*hitScale);
+    } else {
+      // Procedural fallback fighter (120% scale)
+      const body1 = f.char.c1, body2 = f.char.c2;
+      const punchLike = f.state.indexOf('punch') >= 0 || f.state === 'special' || f.state === 'super' || f.state === 'throw';
+      const kickLike = f.state.indexOf('kick') >= 0;
+      const attackTilt = punchLike ? -0.2 : kickLike ? -0.28 : 0;
+      if(f.state === 'crouch') ctx.scale(1, f.hitBoxYScale || 0.6);
+      ctx.rotate(attackTilt);
+      const S1 = 1.2;
+      const grd = ctx.createLinearGradient(-25*S1,-90*S1,25*S1,35*S1);
+      grd.addColorStop(0, body1); grd.addColorStop(1, body2);
+      ctx.fillStyle = grd;
+      ctx.strokeStyle = f.hitFlash>0 ? '#fff' : 'rgba(255,255,255,.15)';
+      ctx.lineWidth = 3;
+
+      // head (120%)
+      ctx.beginPath(); ctx.arc(0,-108*S1,20*S1*hitScale,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      // torso (120%)
+      ctx.fillRect(-20*S1,-90*S1,40*S1,62*S1); ctx.strokeRect(-20*S1,-90*S1,40*S1,62*S1);
+
+      // guard aura (120%)
+      if(f.guarding){
+        ctx.strokeStyle = 'rgba(143,227,255,.75)';
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(0,-66*S1,46*S1,0,Math.PI*2); ctx.stroke();
+      }
+
+      const armFront = punchLike ? 54 : f.state === 'guard' ? 16 : 28;
+      const legFront = kickLike ? 68 : 36;
+      ctx.lineWidth = 8;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = grd;
+      // back arm / front arm / back leg / front leg (120%)
+      drawLimb(-8*S1,-76*S1,-34*S1,-38*S1);
+      drawLimb(8*S1,-76*S1, armFront*S1, (f.state === 'guard' ? -82 : -58)*S1);
+      drawLimb(-10*S1,-28*S1,-22*S1,42*S1);
+      drawLimb(10*S1,-28*S1, legFront*S1, (f.state === 'jump' ? -8 : 42)*S1);
+
+      if(kickLike){
+        ctx.strokeStyle = 'rgba(255,255,255,.35)';
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(16*S1,-16*S1); ctx.quadraticCurveTo(58*S1,-38*S1,82*S1,-6*S1); ctx.stroke();
+      }
+    }
+
+    // name label
+    ctx.scale(f.face,1);
+    ctx.fillStyle = 'rgba(255,255,255,.92)';
+    ctx.font = '800 15px "Barlow Condensed", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(f.name, 0, -152);
+    ctx.restore();
+
+    function drawLimb(x1,y1,x2,y2){
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    }
+  }
+
+  function render(){
+    const w = el.canvas.width / DPR;
+    const h = el.canvas.height / DPR;
+    ctx.clearRect(0,0,w,h);
+
+    // 画面シェイク
+    ctx.save();
+    if(S.shakeRemain > 0){
+      const mag = Math.min(S.shakeRemain * 14, 10);
+      ctx.translate((Math.random()-0.5)*2*mag, (Math.random()-0.5)*2*mag);
+      S.shakeRemain = Math.max(0, S.shakeRemain - 0.016);
+    }
+
+    drawBackground(w,h);
+    drawFighter(S.player, S.enemy, w, h);
+    drawFighter(S.enemy, S.player, w, h);
+    const floorY = h * 0.74;
+    S.hitParticles = S.hitParticles.filter(p => {
+      p.x += p.vx * 0.016; p.y += p.vy * 0.016; p.life -= 0.016; p.vy += 80 * 0.016;
+      if(p.life <= 0) return false;
+      const sx = (p.x / ARENA_WIDTH) * w, sy = floorY + p.y;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, p.life / (p.maxLife || 0.35));
+      ctx.fillStyle = p.color || '#ffd700';
+      ctx.beginPath(); ctx.arc(sx, sy, p.size || 4, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+      return true;
+    });
+
+    ctx.restore(); // シェイク終了
+
+    if(S.flashRemain > 0){
+      ctx.fillStyle = `rgba(255,255,255,${Math.min(0.85, S.flashRemain * 5.5)})`;
+      ctx.fillRect(0, 0, w, h);
+    }
+    ctx.fillStyle = 'rgba(255,255,255,.15)';
+    ctx.font = '900 64px "Barlow Condensed", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('VS', w/2, h*0.21);
+  }
+
+  function loop(ts){
+    if(S.screen !== 'battle' || !S.player || !S.enemy) return;
+    if(S.paused){ animationId = requestAnimationFrame(loop); return; }
+    const dt = clamp((ts - (S.lastTs || ts)) / 1000, 0.001, 0.033);
+    S.lastTs = ts;
+    resizeCanvas();
+    update(dt);
+    render();
+    if(!S.gameOver) animationId = requestAnimationFrame(loop);
+  }
+
+  function setupJoystick(){
+    function setStickFromPoint(clientX, clientY){
+      const base = el.joystickBase;
+      if(!base) return;
+      const r = base.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      let x = (clientX - cx) / (r.width / 2);
+      let y = (cy - clientY) / (r.height / 2);
+      const len = Math.sqrt(x*x + y*y);
+      if(len > 1){ x /= len; y /= len; }
+      S.stickX = x; S.stickY = y;
+      if(el.joystickStick) el.joystickStick.style.transform = `translate(${x*STICK_VISUAL_RADIUS}px, ${-y*STICK_VISUAL_RADIUS}px)`;
+    }
+    function releaseStick(){
+      S.stickX = 0; S.stickY = 0;
+      if(el.joystickStick) el.joystickStick.style.transform = 'translate(0,0)';
+    }
+    function onPointerDown(e){
+      e.preventDefault();
+      setStickFromPoint(e.clientX, e.clientY);
+      const move = (e2) => setStickFromPoint(e2.clientX, e2.clientY);
+      const up = () => { releaseStick(); document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up); };
+      document.addEventListener('pointermove', move, { passive: false });
+      document.addEventListener('pointerup', up);
+      document.addEventListener('pointercancel', up);
+    }
+    if(el.joystickBase) el.joystickBase.addEventListener('pointerdown', onPointerDown, { passive: false });
+  }
+  function setupMovePad(){
+    const pressed = { left:false, right:false, up:false, down:false };
+    const apply = () => {
+      S.stickX = (pressed.right ? 1 : 0) + (pressed.left ? -1 : 0);
+      S.stickY = (pressed.up ? 1 : 0) + (pressed.down ? -1 : 0);
+      S.stickX = clamp(S.stickX, -1, 1);
+      S.stickY = clamp(S.stickY, -1, 1);
+    };
+    const map = { left:'left', right:'right', up:'up', down:'down' };
+    document.querySelectorAll('[data-move]').forEach((btn) => {
+      const key = map[btn.dataset.move];
+      if(!key) return;
+      const press = (e) => { e.preventDefault(); pressed[key] = true; btn.classList.add('pressed'); apply(); };
+      const release = () => { pressed[key] = false; btn.classList.remove('pressed'); apply(); };
+      btn.addEventListener('pointerdown', press, { passive:false });
+      btn.addEventListener('pointerup', release, { passive:true });
+      btn.addEventListener('pointerleave', release, { passive:true });
+      btn.addEventListener('pointercancel', release, { passive:true });
+    });
+  }
+
+  // ========== INIT ==========
+  function bindEvents(){
+    el.startBtn.addEventListener('click', startStory);
+    el.storyNextBtn.addEventListener('click', storyNext);
+    el.confirmSelectBtn.addEventListener('click', goToVs);
+    el.backToTitleBtn.addEventListener('click', () => showScreen('start'));
+    function goSelect(){ renderSelect(); showScreen('select'); }
+    function goStart(){
+      if(S.screen === 'battle' && !S.gameOver) return;
+      showScreen('start');
+    }
+    el.playAgainBtn.addEventListener('click', goSelect);
+    el.playAgainBtn.addEventListener('touchend', (e) => { e.preventDefault(); goSelect(); }, { passive: false });
+    el.returnTitleBtn.addEventListener('click', goStart);
+    el.returnTitleBtn.addEventListener('touchend', (e) => { e.preventDefault(); goStart(); }, { passive: false });
+
+    document.querySelectorAll('[data-action]').forEach(btn => {
+      const triggerSpring = () => {
+        btn.classList.remove('spring');
+        void btn.offsetWidth; // reflow to restart animation
+        btn.classList.add('spring');
+        btn.addEventListener('animationend', () => btn.classList.remove('spring'), { once: true });
+      };
+      btn.addEventListener('pointerdown', () => btn.classList.add('pressed'), { passive: true });
+      btn.addEventListener('pointerup',   () => { btn.classList.remove('pressed'); triggerSpring(); }, { passive: true });
+      btn.addEventListener('pointerleave',() => btn.classList.remove('pressed'), { passive: true });
+      btn.addEventListener('click', () => handlePlayerAction(btn.dataset.action));
+    });
+    if(el.pauseBtn){ el.pauseBtn.addEventListener('click', () => { if(S.screen !== 'battle' || S.gameOver) return; S.paused = true; if(el.pauseOverlay) el.pauseOverlay.classList.add('show'); }); }
+    if(el.resumeBtn){ el.resumeBtn.addEventListener('click', () => { S.paused = false; if(el.pauseOverlay) el.pauseOverlay.classList.remove('show'); }); }
+    if(el.giveUpBtn){ el.giveUpBtn.addEventListener('click', () => { S.paused = false; if(el.pauseOverlay) el.pauseOverlay.classList.remove('show'); endBattle(false); }); }
+    document.querySelectorAll('.difficulty-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const d = btn.dataset.difficulty;
+        if(!d) return;
+        S.difficulty = d;
+        document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.toggle('selected', b.dataset.difficulty === d));
+      });
+    });
+    if(el.storyModeBtn){ el.storyModeBtn.addEventListener('click', startArcadeMode); }
+    if(el.arcadeEndTitleBtn){ el.arcadeEndTitleBtn.addEventListener('click', () => showScreen('start')); }
+    if(el.arcadeEndPlayAgainBtn){ el.arcadeEndPlayAgainBtn.addEventListener('click', () => { renderSelect(); showScreen('select'); }); }
+    if(el.howToPlayBtn){ el.howToPlayBtn.addEventListener('click', () => { if(el.moveListModal) el.moveListModal.classList.add('show'); }); }
+    if(el.closeMoveListBtn){ el.closeMoveListBtn.addEventListener('click', () => { if(el.moveListModal) el.moveListModal.classList.remove('show'); }); }
+    if(el.moveListModal){ el.moveListModal.addEventListener('click', (e) => { if(e.target === el.moveListModal) el.moveListModal.classList.remove('show'); }); }
+    setupJoystick();
+    setupMovePad();
+
+    window.addEventListener('keydown', (e) => {
+      const k = e.key;
+      if(k === 'ArrowLeft'){ e.preventDefault(); S.stickX = -1; pushInputDir(); }
+      if(k === 'ArrowRight'){ e.preventDefault(); S.stickX = 1; pushInputDir(); }
+      if(k === 'ArrowUp'){ e.preventDefault(); S.stickY = 1; pushInputDir(); }
+      if(k === 'ArrowDown'){ e.preventDefault(); S.stickY = -1; pushInputDir(); }
+      if(e.repeat) return;
+      const kk = k.toLowerCase();
+      let action = KEY_MAP[kk];
+      if(action && ['punch_weak','punch_strong','kick_weak','kick_strong'].includes(action) && checkSpecialInput()) action = 'special';
+      if(action){ e.preventDefault(); handlePlayerAction(action); }
+    }, {passive:false});
+    window.addEventListener('keyup', (e) => {
+      if(e.key === 'ArrowLeft' || e.key === 'ArrowRight') S.stickX = 0;
+      if(e.key === 'ArrowUp' || e.key === 'ArrowDown') S.stickY = 0;
+    });
+
+    window.addEventListener('resize', resizeCanvas);
+  }
+
+  if(el.bgmVol){ el.bgmVol.addEventListener('input', () => { S.bgmVolume = el.bgmVol.value / 100; if(el.bgm) el.bgm.volume = S.bgmVolume; }); }
+  if(el.seVol){ el.seVol.addEventListener('input', () => { S.seVolume = el.seVol.value / 100; }); }
+  bindEvents();
+  initIOSHelpers();
+  loadSprites();
+  renderSelect();
+})();
+</script>
+</body>
+</html>
